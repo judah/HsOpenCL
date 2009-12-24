@@ -63,3 +63,40 @@ createProgramWithSource context cs = do
 
 buildProgram :: CLProgram -> IO ()
 buildProgram prog = clBuildProgram prog 0 nullPtr "" nullFunPtr nullPtr
+
+#c
+enum CLProgramBuildInfo {
+    ProgramBuildStatus = CL_PROGRAM_BUILD_STATUS,
+    ProgramBuildOptions = CL_PROGRAM_BUILD_OPTIONS,
+    ProgramBuildLog = CL_PROGRAM_BUILD_LOG
+};
+#endc
+{#enum CLProgramBuildInfo {}#}
+
+#c
+enum CLBuildStatus {
+    CLBuildNone = CL_BUILD_NONE,
+    CLBuildError = CL_BUILD_ERROR,
+    CLBuildSuccess = CL_BUILD_SUCCESS,
+    CLBuildInProgramss = CL_BUILD_IN_PROGRESS
+};
+#endc
+{#enum CLBuildStatus {} deriving (Show,Eq)#}
+    
+
+{#fun clGetProgramBuildInfo as clGetProgramBuildInfo
+  { clProgramPtr `CLProgram'
+  , clDeviceIDPtr `CLDeviceID'
+  , cEnum `CLProgramBuildInfo'
+  , `Int'
+  , id `Ptr ()'
+  , alloca- `Int' peekIntConv*
+  } -> `Int' checkSuccess*-
+#}
+
+getBuildLog :: CLProgram -> CLDeviceID -> IO String
+getBuildLog prog device = allocaBytes {#sizeof size_t#} $ \retValueSize -> do
+    size <- clGetProgramBuildInfo prog device ProgramBuildLog 0 nullPtr 
+    allocaBytes size $ \p -> do
+    size' <- clGetProgramBuildInfo prog device ProgramBuildLog size p
+    peekCString (castPtr p)
