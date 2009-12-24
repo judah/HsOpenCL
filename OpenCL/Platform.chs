@@ -14,6 +14,8 @@ import Foreign.C
 import C2HS
 import Control.Applicative
 
+import OpenCL.Error
+
 #c
 enum CLDeviceType {
     DeviceTypeCPU = CL_DEVICE_TYPE_CPU,
@@ -38,7 +40,7 @@ newCLDeviceID = CLDeviceID <$> mallocForeignPtrBytes {#sizeof cl_device_id#}
   , `Int'
   , withCLDeviceID* `CLDeviceID'
   , id `Ptr CUInt' -- To be ignored
-  } -> `Int'
+  } -> `Int' checkSuccess*-
 #}
 
 -- TODO: does this have overflow?
@@ -66,8 +68,8 @@ enum CLDeviceInfo {
  , cEnum `CLDeviceInfo'
  , `Int'
  , castPtr `Ptr a'
- , alloca- `Int' peekEnum*
- } -> `Int'
+ , alloca- `Int' return*-
+ } -> `Int' checkSuccess*-
 #}
 
 -- TODO: can these be pure?
@@ -79,8 +81,7 @@ clDeviceVendor = stringInfo CLDeviceVendor
 
 stringInfo :: CLDeviceInfo -> CLDeviceID -> IO String
 stringInfo devInfo devID = allocaBytes infoStrLen $ \c_str -> do
-    (res,len) <- clGetDeviceInfoPtr devID devInfo infoStrLen c_str
-    print ("result was:",res)
+    clGetDeviceInfoPtr devID devInfo infoStrLen c_str
     peekCString c_str
     
 infoStrLen :: Int

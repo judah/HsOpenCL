@@ -7,15 +7,16 @@ license:             BSD3
 license-file:        LICENSE
 author:              Judah Jacobson
 maintainer:          judah.jacobson@gmail.com
-build-depends:       base, haskell98
+build-depends:       base>=4, haskell98
 build-type:          Simple
 ghc-options:         
 include-dirs: .
 build-tools: c2hs
 exposed-modules:
+    OpenCL.Error
     OpenCL.Platform
 other-modules:
     C2HS
 c-sources: platform_helpers.c
-extensions: ForeignFunctionInterface
+extensions: ForeignFunctionInterface, DeriveDataTypeable
 frameworks: OpenCL
