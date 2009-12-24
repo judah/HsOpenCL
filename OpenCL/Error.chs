@@ -1,5 +1,6 @@
 module OpenCL.Error(CLError,
-               checkSuccess)  where
+               checkSuccess,
+               checkSuccessPtr)  where
 
 #include <OpenCL/OpenCL.h>
 
@@ -7,6 +8,7 @@ import Data.Typeable
 import Control.Exception
 
 import Foreign.C
+import Foreign
 
 #c
 enum CLError {
@@ -71,3 +73,6 @@ checkSuccess n
     | n' == fromEnum CLSuccess = return ()
     | otherwise = throw (toEnum n' :: CLError)
   where n' = fromEnum n
+
+checkSuccessPtr :: Ptr CInt -> IO ()
+checkSuccessPtr p = peek p >>= checkSuccess

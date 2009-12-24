@@ -20,4 +20,18 @@ cEnum = toEnum . fromEnum
 -- OK, trying contexts as just pointer types:
 -- TODO: foreign pointer plus release when done.
 newtype CLContext = CLContext (Ptr CLContext)
+clContextPtr :: CLContext -> Ptr ()
+clContextPtr (CLContext p) = castPtr p
+
 newtype CLCommandQueue = CLCommandQueue (Ptr CLCommandQueue)
+clCommandQueuePtr :: CLCommandQueue -> Ptr ()
+clCommandQueuePtr (CLCommandQueue p) = castPtr p
+mkCLCommandQueue :: Ptr () -> CLCommandQueue
+mkCLCommandQueue = CLCommandQueue . castPtr
+
+newtype CLProgram = CLProgram (Ptr CLProgram)
+clProgramPtr :: CLProgram -> Ptr ()
+clProgramPtr (CLProgram p) = castPtr p
+mkCLProgram :: Ptr () -> CLProgram
+mkCLProgram = CLProgram . castPtr
+
