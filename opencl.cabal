@@ -1,0 +1,21 @@
+name:                OpenCL-temp
+version:             0.0
+synopsis:            <Project description>
+description:         <Project description>
+category:            
+license:             BSD3
+license-file:        LICENSE
+author:              Judah Jacobson
+maintainer:          judah.jacobson@gmail.com
+build-depends:       base, haskell98
+build-type:          Simple
+ghc-options:         
+include-dirs: .
+build-tools: c2hs
+exposed-modules:
+    OpenCL.Platform
+other-modules:
+    C2HS
+c-sources: platform_helpers.c
+extensions: ForeignFunctionInterface
+frameworks: OpenCL
