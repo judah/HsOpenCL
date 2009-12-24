@@ -7,14 +7,13 @@ module OpenCL.Platform(
             ) where
 
 #include <OpenCL/OpenCL.h>
-#include "platform_helpers.h"
+#include "opencl_wrappers.h"
 
-import Foreign
-import Foreign.C
-import C2HS
 import Control.Applicative
 
+import OpenCL.Helpers.C2HS
 import OpenCL.Error
+{#import OpenCL.Helpers.Types#}
 
 #c
 enum CLDeviceType {
@@ -29,7 +28,6 @@ enum CLDeviceType {
 #endc
 {#enum CLDeviceType {} #}
 
-{#pointer *cl_device_id as CLDeviceID foreign newtype #}
 newCLDeviceID :: IO CLDeviceID
 newCLDeviceID = CLDeviceID <$> mallocForeignPtrBytes {#sizeof cl_device_id#}
 
@@ -43,9 +41,6 @@ newCLDeviceID = CLDeviceID <$> mallocForeignPtrBytes {#sizeof cl_device_id#}
   } -> `Int' checkSuccess*-
 #}
 
--- TODO: does this have overflow?
-cEnum :: (Enum a, Enum b) => a -> b
-cEnum = toEnum . fromEnum
 
 -- TODO: get several at once?
 getDeviceID :: CLDeviceType -> IO CLDeviceID

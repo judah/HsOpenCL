@@ -1,4 +1,4 @@
-#include "platform_helpers.h"
+#include "opencl_wrappers.h"
 
 cl_int clGetDeviceInfoPtr (cl_device_id* device,
                         cl_device_info param_name,
