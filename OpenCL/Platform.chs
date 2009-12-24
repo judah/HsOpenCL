@@ -1,4 +1,10 @@
-module OpenCL.Platform where
+module OpenCL.Platform(
+            CLDeviceType(..),
+            CLDeviceID,
+            getDeviceID,
+            clDeviceName,
+            clDeviceVendor,
+            ) where
 
 #include <OpenCL/OpenCL.h>
 #include "platform_helpers.h"
@@ -19,17 +25,7 @@ enum CLDeviceType {
 
 
 #endc
-{#enum CLDeviceType {} deriving (Eq)#}
-
-{-
-newtype CLDeviceID = CLDeviceID (ForeignPtr (Ptr ()))
-                        deriving Show
-clDeviceIDPtr :: CLDeviceID -> Ptr (Ptr ())
-clDeviceIDPtr (CLDeviceID p) = castPtr p
-
-newCLDeviceID :: IO CLDeviceID
-newCLDeviceID = CLDeviceID <$> mallocBytes {#sizeof cl_device_id#}
--}
+{#enum CLDeviceType {} #}
 
 {#pointer *cl_device_id as CLDeviceID foreign newtype #}
 newCLDeviceID :: IO CLDeviceID
@@ -49,12 +45,18 @@ newCLDeviceID = CLDeviceID <$> mallocForeignPtrBytes {#sizeof cl_device_id#}
 cEnum :: (Enum a, Enum b) => a -> b
 cEnum = toEnum . fromEnum
 
+-- TODO: get several at once?
+getDeviceID :: CLDeviceType -> IO CLDeviceID
+getDeviceID dtype = do
+    did <- newCLDeviceID
+    clGetDeviceIDs nullPtr dtype 1 did nullPtr
+    return did
 
 
 #c
 enum CLDeviceInfo {
     CLDeviceName = CL_DEVICE_NAME,
-    CLDeviceVecotr=  CL_DEVICE_VENDOR
+    CLDeviceVendor =  CL_DEVICE_VENDOR
 };
 #endc
 {#enum CLDeviceInfo {}#}
@@ -68,9 +70,21 @@ enum CLDeviceInfo {
  } -> `Int'
 #}
 
-strLen = 1024
+-- TODO: can these be pure?
 clDeviceName :: CLDeviceID -> IO String
-clDeviceName devID = allocaBytes strLen $ \c_str -> do
-    (res,len) <- clGetDeviceInfoPtr devID CLDeviceName strLen c_str
+clDeviceName = stringInfo CLDeviceName
+
+clDeviceVendor :: CLDeviceID -> IO String
+clDeviceVendor = stringInfo CLDeviceVendor
+
+stringInfo :: CLDeviceInfo -> CLDeviceID -> IO String
+stringInfo devInfo devID = allocaBytes infoStrLen $ \c_str -> do
+    (res,len) <- clGetDeviceInfoPtr devID devInfo infoStrLen c_str
     print ("result was:",res)
     peekCString c_str
+    
+infoStrLen :: Int
+infoStrLen = 1024
+
+-- Next up: figure out an error handling scheme.
+-- (throw exception, perhaps using *- in output)
