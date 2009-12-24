@@ -21,6 +21,6 @@ other-modules:
     OpenCL.Helpers.Types
 c-sources: cbits/opencl_wrappers.c
 includes: opencl_wrappers.h
-extensions: ForeignFunctionInterface, DeriveDataTypeable
+extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls
 frameworks: OpenCL
 ghc-options:

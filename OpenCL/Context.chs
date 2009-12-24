@@ -8,7 +8,7 @@ import OpenCL.Error
 import OpenCL.Helpers.C2HS
 
 clCreateContext :: CLDeviceID -> IO CLContext
-clCreateContext dev = withCLDeviceID dev $ \pd -> alloca $ \errP -> do
+clCreateContext dev = with (clDeviceIDPtr dev) $ \pd -> alloca $ \errP -> do
     cxt :: Ptr () <- {# call clCreateContext as clCreateContext_c #}
                 nullPtr 1 pd nullFunPtr nullPtr errP
     peek errP >>= checkSuccess

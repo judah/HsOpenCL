@@ -3,10 +3,15 @@ module OpenCL.Helpers.Types where
 import Foreign
 #include <OpenCL/OpenCL.h>
 
--- TODO: Change this:
--- currently we keep around a device_id*, but really we want a device_id
--- since it itself is actually a pointer.
-{#pointer *cl_device_id as CLDeviceID foreign newtype #}
+-- I'm assuming that types like cl_device_id are actually pointers,
+-- so they can be passed around by the FFI.
+-- This is true on Apple systems, but I'm not sure how portable it is.
+
+data CLDeviceID_
+newtype CLDeviceID = CLDeviceID (Ptr CLDeviceID_)
+
+clDeviceIDPtr :: CLDeviceID -> Ptr ()
+clDeviceIDPtr (CLDeviceID p) = castPtr p
 
 -- TODO: does this have overflow?
 cEnum :: (Enum a, Enum b) => a -> b

@@ -28,15 +28,12 @@ enum CLDeviceType {
 #endc
 {#enum CLDeviceType {} #}
 
-newCLDeviceID :: IO CLDeviceID
-newCLDeviceID = CLDeviceID <$> mallocForeignPtrBytes {#sizeof cl_device_id#}
-
 -- cl_int clGetDeviceIDs (cl_platform_id platform, cl_device_type device_type, cl_uint num_entries, cl_device_id *devices, cl_uint *num_devices)
 {#fun unsafe clGetDeviceIDs as clGetDeviceIDs
   { id `Ptr ()' -- to be ignored
   , cEnum `CLDeviceType'
   , `Int'
-  , withCLDeviceID* `CLDeviceID'
+  ,  castPtr `Ptr (Ptr _CLDeviceID)'
   , id `Ptr CUInt' -- To be ignored
   } -> `Int' checkSuccess*-
 #}
@@ -44,10 +41,9 @@ newCLDeviceID = CLDeviceID <$> mallocForeignPtrBytes {#sizeof cl_device_id#}
 
 -- TODO: get several at once?
 getDeviceID :: CLDeviceType -> IO CLDeviceID
-getDeviceID dtype = do
-    did <- newCLDeviceID
-    clGetDeviceIDs nullPtr dtype 1 did nullPtr
-    return did
+getDeviceID dtype = alloca $ \p -> do
+    clGetDeviceIDs nullPtr dtype 1 p nullPtr
+    CLDeviceID <$> peek p
 
 
 #c
@@ -58,8 +54,8 @@ enum CLDeviceInfo {
 #endc
 {#enum CLDeviceInfo {}#}
 
-{#fun unsafe clGetDeviceInfoPtr 
- { withCLDeviceID* `CLDeviceID'
+{#fun unsafe clGetDeviceInfo
+ { clDeviceIDPtr `CLDeviceID'
  , cEnum `CLDeviceInfo'
  , `Int'
  , castPtr `Ptr a'
@@ -76,7 +72,7 @@ clDeviceVendor = stringInfo CLDeviceVendor
 
 stringInfo :: CLDeviceInfo -> CLDeviceID -> IO String
 stringInfo devInfo devID = allocaBytes infoStrLen $ \c_str -> do
-    clGetDeviceInfoPtr devID devInfo infoStrLen c_str
+    clGetDeviceInfo devID devInfo infoStrLen c_str
     peekCString c_str
     
 infoStrLen :: Int
