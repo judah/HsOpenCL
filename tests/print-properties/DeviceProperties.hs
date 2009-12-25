@@ -49,7 +49,7 @@ allNames = [
             ,'clDeviceAvailable
             ,'clDeviceCompilerAvailable
             -- ,'clDeviceExecutionCapabilities
-            -- ,'clDeviceQueueProperties
+            ,'clDeviceQueueProperties
             ,'clDeviceName
             ,'clDeviceVendor
             ,'clDriverVersion

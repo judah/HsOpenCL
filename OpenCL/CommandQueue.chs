@@ -11,7 +11,7 @@ enum CLCommandQueueProperties {
     CLQueueProfilingEnable = CL_QUEUE_PROFILING_ENABLE
 };
 #endc
-{#enum CLCommandQueueProperties {}#}
+{#enum CLCommandQueueProperties {} deriving (Show,Eq)#}
 
 {#fun clCreateCommandQueue as clCreateCommandQueue
   { withCLContext* `CLContext'

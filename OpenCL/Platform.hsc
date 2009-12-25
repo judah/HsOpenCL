@@ -49,7 +49,7 @@ module OpenCL.Platform(
             clDeviceAvailable,
             clDeviceCompilerAvailable,
             -- clDeviceExecutionCapabilities,
-            -- clDeviceQueueProperties,
+            clDeviceQueueProperties,
             clDeviceName,
             clDeviceVendor,
             clDriverVersion,
@@ -62,11 +62,13 @@ module OpenCL.Platform(
 #include <OpenCL/OpenCL.h>
 
 import Control.Applicative
+import Data.Bits
 
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
 import OpenCL.Helpers.Types
 import OpenCL.Platform.Foreign
+import OpenCL.CommandQueue (CLCommandQueueProperties(..))
 
 -- TODO: platforms
 
@@ -137,6 +139,12 @@ sizeArrayInfo devInfo devID = unsafePerformIO $ allocaArray numDims $ \p -> do
 enumInfo :: forall a b . (Storable a, Integral a, Enum b) => a -> Int -> CLDeviceID -> b
 enumInfo dummy devInfo devID = toEnum (storableInfo dummy devInfo devID :: Int)
 
+bitfieldInfo :: forall a b . (Storable a, Integral a, Enum b)
+                                    => a -> Int -> [b] -> CLDeviceID -> [b]
+bitfieldInfo dummy devInfo props devID = filter isOne props
+  where
+    bitfield = storableInfo dummy devInfo devID :: Int
+    isOne e = 0 /= (fromEnum e .&. bitfield)
 
 clDeviceType :: CLDeviceID -> CLDeviceType
 clDeviceType = enumInfo (undefined :: #type cl_device_type)
@@ -273,15 +281,20 @@ clDeviceExtensions = deviceInfo (#const CL_DEVICE_EXTENSIONS)
 
 --------
 
+clDeviceQueueProperties :: CLDeviceID -> [CLCommandQueueProperties]
+clDeviceQueueProperties = bitfieldInfo
+                            (undefined :: #type cl_command_queue_properties)
+                            (#const CL_DEVICE_QUEUE_PROPERTIES)
+                            [CLQueueOutOfOrderExecModeEnable
+                            , CLQueueProfilingEnable
+                            ]
+
 {-
 clDeviceSingleFpConfig :: CLDeviceID -> CLDeviceFPConfig
 clDeviceSingleFpConfig = deviceInfo (#const CL_DEVICE_SINGLE_FP_CONFIG)
 
 clDeviceExecutionCapabilities :: CLDeviceID -> CLDeviceExecutionCapabilites
 clDeviceExecutionCapabilities = deviceInfo (#const CL_DEVICE_EXECUTION_CAPABILITIES)
-
-clDeviceQueueProperties :: CLDeviceID -> CLCommandQueueProperties
-clDeviceQueueProperties = deviceInfo (#const CL_DEVICE_QUEUE_PROPERTIES)
 
 clDeviceLocalMemType :: CLDeviceID -> CLDeviceLocalMemType
 clDeviceLocalMemType = deviceInfo (#const CL_DEVICE_LOCAL_MEM_TYPE)
