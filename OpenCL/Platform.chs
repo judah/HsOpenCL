@@ -2,6 +2,7 @@ module OpenCL.Platform(
             CLDeviceType(..),
             CLDeviceID,
             getDeviceID,
+            getDeviceIDs,
             clDeviceName,
             clDeviceVendor,
             ) where
@@ -34,16 +35,24 @@ enum CLDeviceType {
   , cEnum `CLDeviceType'
   , `Int'
   ,  castPtr `Ptr (Ptr _CLDeviceID)'
-  , id `Ptr CUInt' -- To be ignored
+  , alloca- `Int' peekIntConv* -- To be ignored
   } -> `Int' checkSuccess*-
 #}
 
 
--- TODO: get several at once?
 getDeviceID :: CLDeviceType -> IO CLDeviceID
 getDeviceID dtype = alloca $ \p -> do
-    clGetDeviceIDs nullPtr dtype 1 p nullPtr
+    clGetDeviceIDs nullPtr dtype 1 p
     CLDeviceID <$> peek p
+
+getDeviceIDs :: CLDeviceType -> IO [CLDeviceID]
+getDeviceIDs dtype = do
+    -- First, query for the total number:
+    n <- clGetDeviceIDs nullPtr dtype 0 nullPtr
+    -- Now, get this list of all devices:
+    allocaArray n $ \p -> do
+    n' <- clGetDeviceIDs nullPtr dtype n p
+    peekArray n' p >>= return . map CLDeviceID
 
 
 #c
