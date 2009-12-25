@@ -22,14 +22,30 @@ clContextPtr :: CLContext -> Ptr ()
 clContextPtr (CLContext p) = castPtr p
 
 
-newData :: (ForeignPtr a_ -> a) -> FunPtr (Ptr a_ -> IO ())
+newData :: (ForeignPtr a_ -> a) -> Releaser a_
                     -> (Ptr () -> IO a)
 newData construct release p = construct <$> newForeignPtr release (castPtr p)
 
+type Releaser a_ = FunPtr (Ptr a_ -> IO ())
+
+data CLCommandQueue_
+newtype CLCommandQueue = CLCommandQueue (ForeignPtr CLCommandQueue_)
+withCLCommandQueue :: CLCommandQueue -> (Ptr () -> IO a) -> IO a
+withCLCommandQueue (CLCommandQueue p) f = withForeignPtr p $ f . castPtr
+
 data CLProgram_
 newtype CLProgram = CLProgram (ForeignPtr CLProgram_)
-
 withCLProgram :: CLProgram -> (Ptr () -> IO a) -> IO a
 withCLProgram (CLProgram p) f = withForeignPtr p $ f . castPtr
+
+data CLMem_
+newtype CLMem = CLMem (ForeignPtr CLMem_)
+withCLMem :: CLMem -> (Ptr () -> IO a) -> IO a
+withCLMem (CLMem p) f = withForeignPtr p $ f . castPtr
+
+data CLKernel_
+newtype CLKernel = CLKernel (ForeignPtr CLKernel_)
+withCLKernel :: CLKernel -> (Ptr () -> IO a) -> IO a
+withCLKernel (CLKernel p) f = withForeignPtr p $ f . castPtr
 
 

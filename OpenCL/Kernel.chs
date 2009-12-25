@@ -2,24 +2,24 @@ module OpenCL.Kernel where
 
 #include <OpenCL/OpenCL.h>
 import OpenCL.Helpers.Types
-{#import OpenCL.Program#}
 {#import OpenCL.CommandQueue#}
 {#import OpenCL.Buffer#}
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
 
-{#pointer cl_kernel as CLKernel newtype#}
-
 {#fun clCreateKernel as clCreateKernel
   { withCLProgram* `CLProgram'
   , `String'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLKernel' id
+  } -> `CLKernel' newCLKernel*
 #}
 
+newCLKernel = newData CLKernel clReleaseKernel
+foreign import ccall "&" clReleaseKernel :: Releaser CLKernel_
+
 {#fun clSetKernelArg as clSetKernelArg
-  { id `CLKernel'
+  { withCLKernel* `CLKernel'
   , `Int'
   , `Int'
   , castPtr `Ptr a'
@@ -27,13 +27,12 @@ import OpenCL.Error
 #}
 
 setKernelMemArg :: CLKernel -> Int -> CLMem -> IO ()
-setKernelMemArg kernel arg (CLMem mem)
-    = with mem $ 
+setKernelMemArg kernel arg mem = withCLMem mem $ \p -> with p $
         clSetKernelArg kernel arg {#sizeof cl_mem#}
 
 {#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel
-  { id `CLCommandQueue'
-  , id `CLKernel'
+  { withCLCommandQueue* `CLCommandQueue'
+  , withCLKernel* `CLKernel'
   , `Int'
   , id `Ptr CULong' -- currently, must be null.
   , id `Ptr CULong' -- global work size

@@ -6,8 +6,6 @@ import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
-{#pointer cl_mem as CLMem newtype#}
-
 -- OK, idea is:
 -- eventually have a typeclass for objects which can
 -- be put into & taken out of buffers.
@@ -33,16 +31,19 @@ enum CLMemFlags {
   , `Int'
   , id `Ptr ()'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLMem' id
+  } -> `CLMem' newCLMem*
 #}
+
+newCLMem = newData CLMem clReleaseMem
+foreign import ccall "&" clReleaseMem :: Releaser CLMem_
 
 createBuffer :: forall a . Storable a => CLContext -> [CLMemFlags] -> Int -> Ptr a -> IO CLMem
 createBuffer context flags size p
     = clCreateBuffer context flags (size * sizeOf (undefined :: a)) nullPtr
 
 {#fun clEnqueueReadBuffer as clEnqueueReadBuffer
-  { id `CLCommandQueue'
-  , id `CLMem'
+  { withCLCommandQueue* `CLCommandQueue'
+  , withCLMem* `CLMem'
   , cFromBool `Bool'
   , `Int'
   , `Int'
@@ -60,8 +61,8 @@ enqueueReadBuffer queue mem size p
                             0 nullPtr nullPtr
 
 {#fun clEnqueueWriteBuffer as clEnqueueWriteBuffer
-  { id `CLCommandQueue'
-  , id `CLMem'
+  { withCLCommandQueue* `CLCommandQueue'
+  , withCLMem* `CLMem'
   , cFromBool `Bool'
   , `Int'
   , `Int'

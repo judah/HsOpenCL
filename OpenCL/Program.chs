@@ -19,7 +19,7 @@ import Control.Applicative
 newCLProgram = newData CLProgram clReleaseProgram
 
 -- TODO: ignoring the return value...
-foreign import ccall "&" clReleaseProgram :: FunPtr (Ptr CLProgram_ -> IO ())
+foreign import ccall "&" clReleaseProgram :: Releaser CLProgram_
 
 -- TODO: make sure this is safe
 -- TODO: Use ByteString

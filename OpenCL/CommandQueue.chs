@@ -5,8 +5,6 @@ import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
-{#pointer cl_command_queue as CLCommandQueue newtype#}
-
 #c
 enum CLCommandQueueProperties {
     CLQueueOutOfOrderExecModeEnable = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,
@@ -20,16 +18,19 @@ enum CLCommandQueueProperties {
   , clDeviceIDPtr `CLDeviceID'
   , combineBitMasks `[CLCommandQueueProperties]'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLCommandQueue' id
+  } -> `CLCommandQueue' newCLCommandQueue*
 #}
 
+newCLCommandQueue = newData CLCommandQueue clReleaseCommandQueue
+foreign import ccall "&" clReleaseCommandQueue :: Releaser CLCommandQueue_
+
 {#fun clFlush as clFlush
-  { id `CLCommandQueue'
+  { withCLCommandQueue* `CLCommandQueue'
   } -> `CLInt' checkSuccess-
 #}
 
 {#fun clFinish as clFinish
-  { id `CLCommandQueue'
+  { withCLCommandQueue* `CLCommandQueue'
   } -> `CLInt' checkSuccess-
 #}
 
