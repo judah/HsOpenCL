@@ -17,7 +17,7 @@ test1 = do
 test2 file = do
     contents <- readFile file
     dev <- getDeviceID DeviceTypeGPU
-    context <- clCreateContext dev
+    context <- createContext dev
     queue <- clCreateCommandQueue context dev []
     prog <- createProgramWithSource context [contents]
     print "Created!"

@@ -8,21 +8,19 @@ import OpenCL.Helpers.C2HS
 
 import Control.Applicative
 
-{-
 {#fun clCreateContext as clCreateContext
-  { id `Ptr ()'
+  { id `Ptr CLong'
   , `Int'
-  , with- `CLDeviceID' -- TODO: allow more than one, I guess...
+  , castPtr `Ptr (Ptr CLDeviceID_)' -- TODO: allow more than one, I guess...
   , castFunPtr `FunPtr ()'
   , id `Ptr ()'
   , alloca- `CInt' checkSuccessPtr*-
-  } -> `CLContext' id
+  } -> `CLContext' newCLContext*
 #}
--}
-clCreateContext :: CLDeviceID -> IO CLContext
-clCreateContext dev = with (clDeviceIDPtr dev) $ \pd -> alloca $ \errP -> do
-    cxt :: Ptr () <- {# call clCreateContext as clCreateContext_c #}
-                nullPtr 1 pd nullFunPtr nullPtr errP
-    peek errP >>= checkSuccess
-    return (CLContext (castPtr cxt))
 
+createContext :: CLDeviceID -> IO CLContext
+createContext dev = with (castPtr $ clDeviceIDPtr dev) $ \pd ->
+            clCreateContext nullPtr 1 pd nullFunPtr nullPtr
+
+newCLContext = newData CLContext clReleaseContext
+foreign import ccall "&" clReleaseContext :: Releaser CLContext_

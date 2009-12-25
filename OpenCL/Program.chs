@@ -8,7 +8,7 @@ import OpenCL.Error
 import Control.Applicative
 
 {#fun clCreateProgramWithSource as clCreateProgramWithSource
-  { clContextPtr `CLContext'
+  { withCLContext* `CLContext'
   , `Int'
   , id `Ptr CString'
   , id `Ptr CULong'

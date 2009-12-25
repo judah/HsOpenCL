@@ -14,7 +14,7 @@ enum CLCommandQueueProperties {
 {#enum CLCommandQueueProperties {}#}
 
 {#fun clCreateCommandQueue as clCreateCommandQueue
-  { clContextPtr `CLContext'
+  { withCLContext* `CLContext'
   , clDeviceIDPtr `CLDeviceID'
   , combineBitMasks `[CLCommandQueueProperties]'
   , alloca- `Ptr CInt' checkSuccessPtr*-
