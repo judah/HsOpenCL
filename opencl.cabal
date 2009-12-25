@@ -13,6 +13,7 @@ ghc-options:
 include-dirs: includes
 build-tools: c2hs
 exposed-modules:
+    OpenCL.CommandQueue
     OpenCL.Context
     OpenCL.Buffer
     OpenCL.Error
@@ -22,6 +23,7 @@ other-modules:
     OpenCL.Helpers.Types
 c-sources: cbits/opencl_wrappers.c
 includes: opencl_wrappers.h
-extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls
+extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
+            ScopedTypeVariables
 frameworks: OpenCL
 ghc-options:

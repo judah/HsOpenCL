@@ -7,7 +7,9 @@ import OpenCL.Error
 
 -- OK, idea is:
 -- eventually have a typeclass for objects which can
--- be put into buffers.
+-- be put into & taken out of buffers.
+-- (IE lists, Arrays, etc.)
+-- (maybe purity when read-only?)
 
 #c
 enum CLMemFlags {
@@ -30,3 +32,46 @@ enum CLMemFlags {
   , alloca- `Ptr CInt' checkSuccessPtr*-
   } -> `CLMem' mkCLMem
 #}
+
+createBuffer :: forall a . Storable a => CLContext -> [CLMemFlags] -> Int -> Ptr a -> IO CLMem
+createBuffer context flags size p
+    = clCreateBuffer context flags (size * sizeOf (undefined :: a)) nullPtr
+
+{#fun clEnqueueReadBuffer as clEnqueueReadBuffer
+  { clCommandQueuePtr `CLCommandQueue'
+  , clMemPtr `CLMem'
+  , cFromBool `Bool'
+  , `Int'
+  , `Int'
+  , castPtr `Ptr a'
+  , `Int'
+  , id `Ptr (Ptr ())'
+  , id `Ptr (Ptr ())'
+  } -> `CLInt' checkSuccess-
+#}
+
+enqueueReadBuffer :: forall a . Storable a => CLCommandQueue -> CLMem -> Int -> Ptr a
+                        -> IO ()
+enqueueReadBuffer queue mem size p
+    = clEnqueueReadBuffer queue mem True 0 (size * sizeOf (undefined :: a)) p
+                            0 nullPtr nullPtr
+
+{#fun clEnqueueWriteBuffer as clEnqueueWriteBuffer
+  { clCommandQueuePtr `CLCommandQueue'
+  , clMemPtr `CLMem'
+  , cFromBool `Bool'
+  , `Int'
+  , `Int'
+  , castPtr `Ptr a'
+  , `Int'
+  , id `Ptr (Ptr ())'
+  , id `Ptr (Ptr ())'
+  } -> `CLInt' checkSuccess-
+#}
+
+enqueueWriteBuffer :: forall a . Storable a => CLCommandQueue -> CLMem -> Int -> Ptr a
+                        -> IO ()
+enqueueWriteBuffer queue mem size p
+    = clEnqueueWriteBuffer queue mem True 0 (size * sizeOf (undefined :: a)) p
+                            0 nullPtr nullPtr
+
