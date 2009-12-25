@@ -22,13 +22,14 @@ import OpenCL.Error
 
 setKernelMemArg :: CLKernel -> Int -> CLMem -> IO ()
 setKernelMemArg kernel arg mem
-    = clSetKernelArg kernel arg {#sizeof cl_mem#}  (clMemPtr mem)
+    = with (clMemPtr mem) $ 
+        clSetKernelArg kernel arg {#sizeof cl_mem#}
 
 {#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel
   { clCommandQueuePtr `CLCommandQueue'
   , clKernelPtr `CLKernel'
   , `Int'
-  , castPtr `Ptr ()' -- currently, must be null.
+  , id `Ptr CULong' -- currently, must be null.
   , id `Ptr CULong' -- global work size
   , id `Ptr CULong' -- local work size
   , `Int'
