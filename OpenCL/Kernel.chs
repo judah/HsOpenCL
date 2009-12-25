@@ -20,6 +20,25 @@ import OpenCL.Error
   } -> `Int' checkSuccess-
 #}
 
-setKernelMemArg :: CLKernel -> Int -> Int -> CLMem -> IO ()
-setKernelMemArg kernel arg size mem
-    = clSetKernelArg kernel arg size (clMemPtr mem)
+setKernelMemArg :: CLKernel -> Int -> CLMem -> IO ()
+setKernelMemArg kernel arg mem
+    = clSetKernelArg kernel arg {#sizeof cl_mem#}  (clMemPtr mem)
+
+{#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel
+  { clCommandQueuePtr `CLCommandQueue'
+  , clKernelPtr `CLKernel'
+  , `Int'
+  , castPtr `Ptr ()' -- currently, must be null.
+  , id `Ptr CULong' -- global work size
+  , id `Ptr CULong' -- local work size
+  , `Int'
+  , id `Ptr (Ptr ())'
+  , id `Ptr (Ptr ())'
+  } -> `Int' checkSuccess-
+#}
+
+enqueueNDRangeKernel :: CLCommandQueue -> CLKernel -> [Int] -> IO ()
+enqueueNDRangeKernel queue kernel globalWorkSize
+    = withArrayLen (map toEnum globalWorkSize) $ \dim workSizes ->
+        clEnqueueNDRangeKernel queue kernel dim nullPtr workSizes nullPtr 0 nullPtr
+                nullPtr
