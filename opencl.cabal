@@ -13,12 +13,14 @@ ghc-options:
 include-dirs: includes
 build-tools: c2hs
 exposed-modules:
+    OpenCL
     OpenCL.CommandQueue
     OpenCL.Context
     OpenCL.Buffer
     OpenCL.Error
     OpenCL.Kernel
     OpenCL.Platform
+    OpenCL.Program
 other-modules:
     OpenCL.Helpers.C2HS
     OpenCL.Helpers.Types

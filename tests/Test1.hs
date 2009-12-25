@@ -1,12 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Test1 where
 
-import OpenCL.Platform
-import OpenCL.Context hiding (clCreateCommandQueue)
-import OpenCL.Error
-import OpenCL.Kernel
-import OpenCL.Buffer
-import OpenCL.CommandQueue
+import OpenCL
 
 import Foreign
 import Foreign.C
