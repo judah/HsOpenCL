@@ -1,6 +1,7 @@
 module OpenCL.Helpers.Types where
 
 import Foreign
+import Control.Applicative
 
 -- I'm assuming that types like cl_device_id are actually pointers,
 -- so they can be passed around by the FFI.
@@ -21,5 +22,14 @@ clContextPtr :: CLContext -> Ptr ()
 clContextPtr (CLContext p) = castPtr p
 
 
+newData :: (ForeignPtr a_ -> a) -> FunPtr (Ptr a_ -> IO ())
+                    -> (Ptr () -> IO a)
+newData construct release p = construct <$> newForeignPtr release (castPtr p)
+
+data CLProgram_
+newtype CLProgram = CLProgram (ForeignPtr CLProgram_)
+
+withCLProgram :: CLProgram -> (Ptr () -> IO a) -> IO a
+withCLProgram (CLProgram p) f = withForeignPtr p $ f . castPtr
 
 

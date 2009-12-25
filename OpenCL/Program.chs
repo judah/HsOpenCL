@@ -7,16 +7,19 @@ import OpenCL.Error
 
 import Control.Applicative
 
-{#pointer cl_program as CLProgram newtype#}
-
 {#fun clCreateProgramWithSource as clCreateProgramWithSource
   { clContextPtr `CLContext'
   , `Int'
   , id `Ptr CString'
   , id `Ptr CULong'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLProgram' id
+  } -> `CLProgram' newCLProgram*
 #}
+
+newCLProgram = newData CLProgram clReleaseProgram
+
+-- TODO: ignoring the return value...
+foreign import ccall "&" clReleaseProgram :: FunPtr (Ptr CLProgram_ -> IO ())
 
 -- TODO: make sure this is safe
 -- TODO: Use ByteString
@@ -33,7 +36,7 @@ createProgramWithSource context cs = do
     return prog
 
 {#fun clBuildProgram as clBuildProgram
-  { id `CLProgram'
+  { withCLProgram* `CLProgram'
   , cEnum `Int'
   , castPtr `Ptr (Ptr _CLDeviceID)'
   , `String'
@@ -66,7 +69,7 @@ enum CLBuildStatus {
     
 
 {#fun clGetProgramBuildInfo as clGetProgramBuildInfo
-  { id `CLProgram'
+  { withCLProgram* `CLProgram'
   , clDeviceIDPtr `CLDeviceID'
   , cEnum `CLProgramBuildInfo'
   , `Int'

@@ -12,7 +12,7 @@ import OpenCL.Error
 {#pointer cl_kernel as CLKernel newtype#}
 
 {#fun clCreateKernel as clCreateKernel
-  { id `CLProgram'
+  { withCLProgram* `CLProgram'
   , `String'
   , alloca- `Ptr CInt' checkSuccessPtr*-
   } -> `CLKernel' id
