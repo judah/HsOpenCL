@@ -18,16 +18,16 @@ enum CLCommandQueueProperties {
   , clDeviceIDPtr `CLDeviceID'
   , combineBitMasks `[CLCommandQueueProperties]'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLCommandQueue' mkCLCommandQueue
+  } -> `CLCommandQueue' id
 #}
 
 {#fun clFlush as clFlush
-  { clCommandQueuePtr `CLCommandQueue'
+  { id `CLCommandQueue'
   } -> `CLInt' checkSuccess-
 #}
 
 {#fun clFinish as clFinish
-  { clCommandQueuePtr `CLCommandQueue'
+  { id `CLCommandQueue'
   } -> `CLInt' checkSuccess-
 #}
 

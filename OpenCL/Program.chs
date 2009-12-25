@@ -8,12 +8,12 @@ import OpenCL.Error
 import Control.Applicative
 
 {#fun clCreateProgramWithSource as clCreateProgramWithSource
-  { clContextPtr `CLContext'
+  { id `CLContext'
   , `Int'
   , id `Ptr CString'
   , id `Ptr CULong'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLProgram' mkCLProgram
+  } -> `CLProgram' id
 #}
 
 -- TODO: make sure this is safe
@@ -31,7 +31,7 @@ createProgramWithSource context cs = do
     return prog
 
 {#fun clBuildProgram as clBuildProgram
-  { clProgramPtr `CLProgram'
+  { id `CLProgram'
   , cEnum `Int'
   , castPtr `Ptr (Ptr _CLDeviceID)'
   , `String'
@@ -64,7 +64,7 @@ enum CLBuildStatus {
     
 
 {#fun clGetProgramBuildInfo as clGetProgramBuildInfo
-  { clProgramPtr `CLProgram'
+  { id `CLProgram'
   , clDeviceIDPtr `CLDeviceID'
   , cEnum `CLProgramBuildInfo'
   , `Int'

@@ -6,14 +6,14 @@ import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
 {#fun clCreateKernel as clCreateKernel
-  { clProgramPtr `CLProgram'
+  { id `CLProgram'
   , `String'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLKernel' mkCLKernel
+  } -> `CLKernel' id
 #}
 
 {#fun clSetKernelArg as clSetKernelArg
-  { clKernelPtr `CLKernel'
+  { id `CLKernel'
   , `Int'
   , `Int'
   , castPtr `Ptr a'
@@ -21,13 +21,13 @@ import OpenCL.Error
 #}
 
 setKernelMemArg :: CLKernel -> Int -> CLMem -> IO ()
-setKernelMemArg kernel arg mem
-    = with (clMemPtr mem) $ 
+setKernelMemArg kernel arg (CLMem mem)
+    = with mem $ 
         clSetKernelArg kernel arg {#sizeof cl_mem#}
 
 {#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel
-  { clCommandQueuePtr `CLCommandQueue'
-  , clKernelPtr `CLKernel'
+  { id `CLCommandQueue'
+  , id `CLKernel'
   , `Int'
   , id `Ptr CULong' -- currently, must be null.
   , id `Ptr CULong' -- global work size

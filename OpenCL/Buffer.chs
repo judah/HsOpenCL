@@ -25,12 +25,12 @@ enum CLMemFlags {
 
 -- TODO: should I be using Long or size_T explicitly to prevent overflow?
 {#fun clCreateBuffer as clCreateBuffer
-  { clContextPtr `CLContext'
+  { id `CLContext'
   , combineBitMasks `[CLMemFlags]'
   , `Int'
   , id `Ptr ()'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLMem' mkCLMem
+  } -> `CLMem' id
 #}
 
 createBuffer :: forall a . Storable a => CLContext -> [CLMemFlags] -> Int -> Ptr a -> IO CLMem
@@ -38,8 +38,8 @@ createBuffer context flags size p
     = clCreateBuffer context flags (size * sizeOf (undefined :: a)) nullPtr
 
 {#fun clEnqueueReadBuffer as clEnqueueReadBuffer
-  { clCommandQueuePtr `CLCommandQueue'
-  , clMemPtr `CLMem'
+  { id `CLCommandQueue'
+  , id `CLMem'
   , cFromBool `Bool'
   , `Int'
   , `Int'
@@ -57,8 +57,8 @@ enqueueReadBuffer queue mem size p
                             0 nullPtr nullPtr
 
 {#fun clEnqueueWriteBuffer as clEnqueueWriteBuffer
-  { clCommandQueuePtr `CLCommandQueue'
-  , clMemPtr `CLMem'
+  { id `CLCommandQueue'
+  , id `CLMem'
   , cFromBool `Bool'
   , `Int'
   , `Int'

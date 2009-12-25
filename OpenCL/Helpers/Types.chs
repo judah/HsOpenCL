@@ -17,33 +17,14 @@ clDeviceIDPtr (CLDeviceID p) = castPtr p
 cEnum :: (Enum a, Enum b) => a -> b
 cEnum = toEnum . fromEnum
 
--- OK, trying contexts as just pointer types:
--- TODO: foreign pointer plus release when done.
 newtype CLContext = CLContext (Ptr CLContext)
 clContextPtr :: CLContext -> Ptr ()
 clContextPtr (CLContext p) = castPtr p
 
-newtype CLCommandQueue = CLCommandQueue (Ptr CLCommandQueue)
-clCommandQueuePtr :: CLCommandQueue -> Ptr ()
-clCommandQueuePtr (CLCommandQueue p) = castPtr p
-mkCLCommandQueue :: Ptr () -> CLCommandQueue
-mkCLCommandQueue = CLCommandQueue . castPtr
+{#pointer cl_command_queue as CLCommandQueue newtype#}
 
-newtype CLProgram = CLProgram (Ptr CLProgram)
-clProgramPtr :: CLProgram -> Ptr ()
-clProgramPtr (CLProgram p) = castPtr p
-mkCLProgram :: Ptr () -> CLProgram
-mkCLProgram = CLProgram . castPtr
+{#pointer cl_program as CLProgram newtype#}
 
-newtype CLMem = CLMem (Ptr CLMem)
-clMemPtr :: CLMem -> Ptr ()
-clMemPtr (CLMem p) = castPtr p
-mkCLMem :: Ptr () -> CLMem
-mkCLMem = CLMem . castPtr
+{#pointer cl_mem as CLMem newtype#}
 
-newtype CLKernel = CLKernel (Ptr CLKernel)
-clKernelPtr :: CLKernel -> Ptr ()
-clKernelPtr (CLKernel p) = castPtr p
-mkCLKernel :: Ptr () -> CLKernel
-mkCLKernel = CLKernel . castPtr
-
+{#pointer cl_kernel as CLKernel newtype#}
