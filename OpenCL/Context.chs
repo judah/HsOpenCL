@@ -3,7 +3,7 @@ module OpenCL.Context where
 
 import OpenCL.Error
 #include <OpenCL/OpenCL.h>
-{#import OpenCL.Helpers.Types#}
+import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 
 import Control.Applicative

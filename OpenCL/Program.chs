@@ -1,11 +1,13 @@
 module OpenCL.Program where
 
 #include <OpenCL/OpenCL.h>
-{#import OpenCL.Helpers.Types#}
+import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
 import Control.Applicative
+
+{#pointer cl_program as CLProgram newtype#}
 
 {#fun clCreateProgramWithSource as clCreateProgramWithSource
   { clContextPtr `CLContext'

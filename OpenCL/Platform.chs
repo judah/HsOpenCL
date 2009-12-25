@@ -13,7 +13,7 @@ import Control.Applicative
 
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
-{#import OpenCL.Helpers.Types#}
+import OpenCL.Helpers.Types
 
 #c
 enum CLDeviceType {

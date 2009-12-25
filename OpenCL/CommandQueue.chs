@@ -1,9 +1,11 @@
 module OpenCL.CommandQueue where
 
 #include <OpenCL/OpenCL.h>
-{#import OpenCL.Helpers.Types#}
+import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
+
+{#pointer cl_command_queue as CLCommandQueue newtype#}
 
 #c
 enum CLCommandQueueProperties {

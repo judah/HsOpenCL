@@ -1,9 +1,12 @@
 module OpenCL.Buffer where
 
 #include <OpenCL/OpenCL.h>
-{#import OpenCL.Helpers.Types#}
+import OpenCL.Helpers.Types
+{#import OpenCL.CommandQueue#}
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
+
+{#pointer cl_mem as CLMem newtype#}
 
 -- OK, idea is:
 -- eventually have a typeclass for objects which can

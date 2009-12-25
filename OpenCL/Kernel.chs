@@ -1,9 +1,15 @@
 module OpenCL.Kernel where
 
 #include <OpenCL/OpenCL.h>
-{#import OpenCL.Helpers.Types#}
+import OpenCL.Helpers.Types
+{#import OpenCL.Program#}
+{#import OpenCL.CommandQueue#}
+{#import OpenCL.Buffer#}
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
+
+
+{#pointer cl_kernel as CLKernel newtype#}
 
 {#fun clCreateKernel as clCreateKernel
   { id `CLProgram'
