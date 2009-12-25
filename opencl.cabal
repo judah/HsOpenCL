@@ -17,6 +17,7 @@ exposed-modules:
     OpenCL.Context
     OpenCL.Buffer
     OpenCL.Error
+    OpenCL.Kernel
     OpenCL.Platform
 other-modules:
     OpenCL.Helpers.C2HS

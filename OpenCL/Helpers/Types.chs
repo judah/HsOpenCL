@@ -40,3 +40,10 @@ clMemPtr :: CLMem -> Ptr ()
 clMemPtr (CLMem p) = castPtr p
 mkCLMem :: Ptr () -> CLMem
 mkCLMem = CLMem . castPtr
+
+newtype CLKernel = CLKernel (Ptr CLKernel)
+clKernelPtr :: CLKernel -> Ptr ()
+clKernelPtr (CLKernel p) = castPtr p
+mkCLKernel :: Ptr () -> CLKernel
+mkCLKernel = CLKernel . castPtr
+

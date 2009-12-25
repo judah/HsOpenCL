@@ -25,3 +25,9 @@ enum CLCommandQueueProperties {
   { clCommandQueuePtr `CLCommandQueue'
   } -> `CLInt' checkSuccess-
 #}
+
+{#fun clFinish as clFinish
+  { clCommandQueuePtr `CLCommandQueue'
+  } -> `CLInt' checkSuccess-
+#}
+
