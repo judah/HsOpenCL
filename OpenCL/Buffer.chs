@@ -25,7 +25,7 @@ enum CLMemFlags {
 
 -- TODO: should I be using Long or size_T explicitly to prevent overflow?
 {#fun clCreateBuffer as clCreateBuffer
-  { id `CLContext'
+  { clContextPtr `CLContext'
   , combineBitMasks `[CLMemFlags]'
   , `Int'
   , id `Ptr ()'

@@ -14,6 +14,7 @@ include-dirs: includes
 build-tools: c2hs
 exposed-modules:
     OpenCL
+    OpenCL.Helpers.Types
     OpenCL.CommandQueue
     OpenCL.Context
     OpenCL.Buffer
@@ -23,7 +24,6 @@ exposed-modules:
     OpenCL.Program
 other-modules:
     OpenCL.Helpers.C2HS
-    OpenCL.Helpers.Types
 c-sources: cbits/opencl_wrappers.c
 includes: opencl_wrappers.h
 extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
