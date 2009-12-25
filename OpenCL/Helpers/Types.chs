@@ -35,3 +35,8 @@ clProgramPtr (CLProgram p) = castPtr p
 mkCLProgram :: Ptr () -> CLProgram
 mkCLProgram = CLProgram . castPtr
 
+newtype CLMem = CLMem (Ptr CLMem)
+clMemPtr :: CLMem -> Ptr ()
+clMemPtr (CLMem p) = castPtr p
+mkCLMem :: Ptr () -> CLMem
+mkCLMem = CLMem . castPtr
