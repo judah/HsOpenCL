@@ -34,7 +34,7 @@ allNames = [
             ,'clDeviceMaxSamplers
             ,'clDeviceMemBaseAddrAlign
             ,'clDeviceMinDataTypeAlignSize
-            -- ,'clDeviceSingleFpConfig
+            ,'clDeviceSingleFpConfig
             -- ,'clDeviceGlobalMemCacheType
             ,'clDeviceGlobalMemCachelineSize
             ,'clDeviceGlobalMemCacheSize

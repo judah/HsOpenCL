@@ -34,7 +34,7 @@ module OpenCL.Platform(
             clDeviceMaxSamplers,
             clDeviceMemBaseAddrAlign,
             clDeviceMinDataTypeAlignSize,
-            -- clDeviceSingleFpConfig,
+            clDeviceSingleFpConfig,
             -- clDeviceGlobalMemCacheType,
             clDeviceGlobalMemCachelineSize,
             clDeviceGlobalMemCacheSize,
@@ -289,10 +289,17 @@ clDeviceQueueProperties = bitfieldInfo
                             , CLQueueProfilingEnable
                             ]
 
-{-
-clDeviceSingleFpConfig :: CLDeviceID -> CLDeviceFPConfig
-clDeviceSingleFpConfig = deviceInfo (#const CL_DEVICE_SINGLE_FP_CONFIG)
+clDeviceSingleFpConfig :: CLDeviceID -> [CLDeviceFPConfig]
+clDeviceSingleFpConfig = bitfieldInfo
+                            (undefined :: #type cl_device_fp_config)
+                            (#const CL_DEVICE_SINGLE_FP_CONFIG)
+                            [ CLFPDenorm
+                            , CLFPInfNan
+                            , CLFPRoundToNearest
+                            , CLFPRoundToZero
+                            ]
 
+{-
 clDeviceExecutionCapabilities :: CLDeviceID -> CLDeviceExecutionCapabilites
 clDeviceExecutionCapabilities = deviceInfo (#const CL_DEVICE_EXECUTION_CAPABILITIES)
 

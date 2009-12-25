@@ -43,3 +43,13 @@ deviceTypeEnum t = cEnum t
  } -> `Int' checkSuccess*-
 #}
 
+#c
+enum CLDeviceFPConfig{
+    CLFPDenorm = CL_FP_DENORM,
+    CLFPInfNan = CL_FP_INF_NAN,
+    CLFPRoundToNearest = CL_FP_ROUND_TO_NEAREST,
+    CLFPRoundToZero = CL_FP_ROUND_TO_ZERO
+};
+#endc
+{#enum CLDeviceFPConfig {} deriving (Eq,Show)#}
+
