@@ -7,6 +7,7 @@ import Control.Applicative
 -- so they can be passed around by the FFI.
 -- This is true on Apple systems, but I'm not sure how portable it is.
 
+type Releaser a_ = FunPtr (Ptr a_ -> IO ())
 
 -- TODO: does this have overflow?
 cEnum :: (Enum a, Enum b) => a -> b
@@ -28,8 +29,6 @@ data CLContext_
 newtype CLContext = CLContext (ForeignPtr CLContext_)
 withCLContext :: CLContext -> (Ptr () -> IO a) -> IO a
 withCLContext (CLContext p) f = withForeignPtr p $ f . castPtr
-
-type Releaser a_ = FunPtr (Ptr a_ -> IO ())
 
 data CLCommandQueue_
 newtype CLCommandQueue = CLCommandQueue (ForeignPtr CLCommandQueue_)

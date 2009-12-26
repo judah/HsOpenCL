@@ -57,7 +57,7 @@ createBuffer context flags size p
   , `Int'
   , id `Ptr (Ptr ())'
   , id `Ptr (Ptr ())'
-  } -> `CLInt' checkSuccess-
+  } -> `Int' checkSuccess-
 #}
 
 enqueueReadBuffer :: forall a . Storable a => CLCommandQueue -> CLMem -> Int -> Ptr a
@@ -76,7 +76,7 @@ enqueueReadBuffer queue mem size p
   , `Int'
   , id `Ptr (Ptr ())'
   , id `Ptr (Ptr ())'
-  } -> `CLInt' checkSuccess-
+  } -> `Int' checkSuccess-
 #}
 
 enqueueWriteBuffer :: forall a . Storable a => CLCommandQueue -> CLMem -> Int -> Ptr a

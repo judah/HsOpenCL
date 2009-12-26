@@ -30,7 +30,7 @@ newSimpleContext :: CLDeviceType -> IO SimpleContext
 newSimpleContext devType = do
     devID <- getDeviceID devType
     cxt <- createContext [devID]
-    queue <- clCreateCommandQueue cxt devID []
+    queue <- createCommandQueue cxt devID []
     return $ SimpleContext devID cxt queue
 
 buildSimpleProgram :: SimpleContext -> [String] -> IO CLProgram
