@@ -1,4 +1,10 @@
-module OpenCL.Buffer where
+module OpenCL.Buffer(
+                CLMem,
+                CLMemFlags(..),
+                createBuffer,
+                enqueueReadBuffer,
+                enqueueWriteBuffer,
+                ) where
 
 #include <OpenCL/OpenCL.h>
 import OpenCL.Helpers.Types

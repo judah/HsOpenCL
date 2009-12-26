@@ -7,7 +7,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Judah Jacobson
 maintainer:          judah.jacobson@gmail.com
-build-depends:       base>=4, haskell98
+build-depends:       base>=4, haskell98, carray
 build-type:          Simple
 ghc-options:         
 include-dirs: includes
@@ -21,6 +21,7 @@ exposed-modules:
     OpenCL.Buffer
     OpenCL.Kernel
     OpenCL
+    OpenCL.Simple
 other-modules:
     OpenCL.Helpers.C2HS
     OpenCL.Helpers.Types
@@ -28,6 +29,7 @@ other-modules:
 c-sources: cbits/opencl_wrappers.c
 includes: opencl_wrappers.h
 extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
-            ScopedTypeVariables, TypeSynonymInstances, FlexibleInstances
+            ScopedTypeVariables, TypeSynonymInstances, FlexibleInstances,
+            GADTs
 frameworks: OpenCL
 ghc-options:

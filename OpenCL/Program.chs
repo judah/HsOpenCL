@@ -1,4 +1,11 @@
-module OpenCL.Program where
+module OpenCL.Program(CLProgram,
+                    createProgramWithSource,
+                    buildProgram,
+                    CLProgramBuildInfo(..),
+                    CLBuildStatus,
+                    clGetProgramBuildInfo,
+                    getBuildLog,
+                ) where
 
 #include <OpenCL/OpenCL.h>
 import OpenCL.Helpers.Types

@@ -1,4 +1,10 @@
-module OpenCL.CommandQueue where
+module OpenCL.CommandQueue(
+                CLCommandQueue,
+                CLCommandQueueProperties(..),
+                clCreateCommandQueue,
+                clFlush,
+                clFinish,
+                ) where
 
 #include <OpenCL/OpenCL.h>
 import OpenCL.Helpers.Types

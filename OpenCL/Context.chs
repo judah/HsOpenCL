@@ -1,5 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module OpenCL.Context where
+module OpenCL.Context(CLContext,
+                        createContext) where
 
 import OpenCL.Error
 #include <OpenCL/OpenCL.h>

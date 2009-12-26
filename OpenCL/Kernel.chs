@@ -1,4 +1,9 @@
-module OpenCL.Kernel where
+module OpenCL.Kernel(
+                CLKernel,
+                clCreateKernel,
+                setKernelMemArg,
+                enqueueNDRangeKernel,
+                ) where
 
 #include <OpenCL/OpenCL.h>
 import OpenCL.Helpers.Types
