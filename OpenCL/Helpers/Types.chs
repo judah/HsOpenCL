@@ -1,7 +1,12 @@
 module OpenCL.Helpers.Types where
 
+#include <OpenCL/OpenCL.h>
+
 import Foreign
+import Foreign.C
 import Control.Applicative
+
+import OpenCL.Error
 
 -- I'm assuming that types like cl_device_id are actually pointers,
 -- so they can be passed around by the FFI.
@@ -25,10 +30,30 @@ newtype CLDeviceID = CLDeviceID {_clDeviceIDPtr :: Ptr CLDeviceID_}
 clDeviceIDPtr :: CLDeviceID -> Ptr ()
 clDeviceIDPtr (CLDeviceID p) = castPtr p
 
+------------
 data CLContext_
 newtype CLContext = CLContext (ForeignPtr CLContext_)
 withCLContext :: CLContext -> (Ptr () -> IO a) -> IO a
 withCLContext (CLContext p) f = withForeignPtr p $ f . castPtr
+
+newCLContext = newData CLContext clReleaseContext
+foreign import ccall "&" clReleaseContext :: Releaser CLContext_
+
+{#fun clRetainContext
+  { id `Ptr ()'
+  } -> `Int' checkSuccess*-
+#}
+
+-- Being careful of race conditions:
+-- The foreignptr points back to the context, and if it's GC'd
+-- it could cause the context to be released prematurely.
+-- So, make sure the ForeignPtr stays alive long enough for us to retain
+-- the context.
+retainedContextInfo :: ForeignPtr a -> Ptr () -> IO CLContext
+retainedContextInfo child p = withForeignPtr child $ \_ -> do
+    clRetainContext p
+    newCLContext p
+------------
 
 data CLCommandQueue_
 newtype CLCommandQueue = CLCommandQueue (ForeignPtr CLCommandQueue_)

@@ -25,7 +25,6 @@ other-modules:
     OpenCL.Helpers.C2HS
     OpenCL.Helpers.Types
     OpenCL.Platform.Foreign
-    OpenCL.Context.Retainer
 extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
             ScopedTypeVariables, TypeSynonymInstances, FlexibleInstances,
             GADTs

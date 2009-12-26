@@ -16,7 +16,6 @@ module OpenCL.CommandQueue(
 import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
-import OpenCL.Context.Retainer
 
 import Control.Monad
 

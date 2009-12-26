@@ -11,7 +11,6 @@ import OpenCL.Error
 import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Platform.Foreign
-import OpenCL.Context.Retainer
 
 import Control.Applicative
 
