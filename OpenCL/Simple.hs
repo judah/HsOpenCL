@@ -1,9 +1,7 @@
 module OpenCL.Simple(
-            SimpleContext,
+            SimpleProgram(..),
             CLDeviceType(..),
-            newSimpleContext,
-            CLProgram,
-            buildSimpleProgram,
+            newSimpleProgram,
             CLKernel,
             getKernel,
             KernelArg(..),
@@ -22,32 +20,61 @@ import Control.Monad
 
 -- TODO: this isn't really necessary, since
 -- all of the types can ask for their context/id/etc.
-data SimpleContext = SimpleContext {
+data SimpleProgram = SimpleProgram {
                         simpleID :: CLDeviceID
                         , simpleCxt :: CLContext
                         , simpleQueue :: CLCommandQueue
+                        , simpleProgram :: CLProgram
                         }
 
-newSimpleContext :: CLDeviceType -> IO SimpleContext
-newSimpleContext devType = do
+-- TODO: should be bytestring.
+newSimpleProgram :: CLDeviceType -> [String] -> IO SimpleProgram
+newSimpleProgram devType sources = do
     devID <- getDeviceID devType
     cxt <- createContext [devID]
     queue <- createCommandQueue cxt devID []
-    return $ SimpleContext devID cxt queue
+    prog <- buildSimpleProgram devID cxt sources
+    return $ SimpleProgram devID cxt queue prog
 
-buildSimpleProgram :: SimpleContext -> [String] -> IO CLProgram
-buildSimpleProgram cxt contents = do
-    prog <- createProgramWithSource (simpleCxt cxt) contents
+buildSimpleProgram :: CLDeviceID -> CLContext -> [String] -> IO CLProgram
+buildSimpleProgram did cxt sources = do
+    prog <- createProgramWithSource cxt sources
     handle (\(e::CLError) -> do
                 hPutStrLn stderr $ "Error building program: " ++ show e
-                log <- getBuildLog prog (simpleID cxt)
+                log <- getBuildLog prog did
                 putStrLn log
                 throw e)
         $ buildProgram prog
     return prog
 
-getKernel :: CLProgram -> String -> IO CLKernel
-getKernel = clCreateKernel
+
+{-
+data KernelArgType = ReadOnly | ReadWrite | WriteOnly
+
+data SomeStorable a where
+    SomeStorable :: Storable e => a e -> SomeStorable a
+class KernelResult a where
+    resultArrays :: a -> [SomeStorable (CArray Int)]
+
+instance Storable a => KernelResult (CArray Int a) where
+    resultArrays 
+
+OK, question becomes whether we want to set the buf size each time...
+
+
+OK, API is:
+data KernelFunc f = KernelFunc {funcKernel :: Kernel,
+                                kernelArgs :: KernelArgs
+                                numKernelReturns :: Int
+                                }
+getKernel :: KernelFuncType f => Program -> String -> IO KernelFun f
+
+class KernelFuncType f where
+    
+
+-}
+getKernel :: SimpleProgram -> String -> IO CLKernel
+getKernel = clCreateKernel . simpleProgram
 
 -- Add note that Doubles probably won't work...
 data KernelArg where
@@ -74,7 +101,7 @@ data KernelArg where
 -- instance KernelFunc f, Storable a => KernelFunc (IOCArray Int a -> f) 
 --
 -- And then of course deal with 2d and 3d data...
-runKernel :: SimpleContext -> CLKernel -> [KernelArg] -> IO ()
+runKernel :: SimpleProgram -> CLKernel -> [KernelArg] -> IO ()
 runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     let queue = simpleQueue cxt
     size <- getCommonSize args
@@ -116,7 +143,7 @@ withArgs (WriteOnly x:xs) f = withIOCArray x $ \p -> withArgs xs
 
 -- TODO: be more efficient
 -- We have to be careful since we don't want it to be freed
-bufferArg :: SimpleContext -> Int -> KernelPtrArg -> IO CLMem
+bufferArg :: SimpleProgram -> Int -> KernelPtrArg -> IO CLMem
 bufferArg cxt size (ReadOnlyPtr p) = do
     mem <- createBuffer (simpleCxt cxt) [CLMemReadOnly] size p
     enqueueWriteBuffer (simpleQueue cxt) mem size p

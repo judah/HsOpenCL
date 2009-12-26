@@ -8,9 +8,8 @@ import Data.Array.IOCArray
 
 
 main = do
-    cxt <- newSimpleContext DeviceTypeGPU
     contents <- readFile "test_prog.cl"
-    prog <- buildSimpleProgram cxt [contents]
+    prog <- newSimpleProgram DeviceTypeGPU [contents]
     putStrLn "Built!"
     kernel <- getKernel prog "add"
     let size = 32
@@ -18,5 +17,5 @@ main = do
     let a = listArray (0,size-1) [0..n-1]
     let b = listArray (0,size-1) [n,n-1..1]
     c :: IOCArray Int Float <- newArray_ (0,size-1)
-    runKernel cxt kernel [ReadOnly a, ReadOnly b, WriteOnly c]
+    runKernel prog kernel [ReadOnly a, ReadOnly b, WriteOnly c]
     getElems c >>= print
