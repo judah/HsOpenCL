@@ -7,8 +7,6 @@ module OpenCL.Kernel(
 
 #include <OpenCL/OpenCL.h>
 import OpenCL.Helpers.Types
-{#import OpenCL.CommandQueue#}
-{#import OpenCL.Buffer#}
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
@@ -31,7 +29,7 @@ foreign import ccall "&" clReleaseKernel :: Releaser CLKernel_
   } -> `Int' checkSuccess-
 #}
 
-setKernelMemArg :: CLKernel -> Int -> CLMem -> IO ()
+setKernelMemArg :: CLKernel -> Int -> CLMem a -> IO ()
 setKernelMemArg kernel arg mem = withCLMem mem $ \p -> with p $
         clSetKernelArg kernel arg {#sizeof cl_mem#}
 

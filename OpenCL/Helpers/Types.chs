@@ -65,10 +65,22 @@ newtype CLProgram = CLProgram (ForeignPtr CLProgram_)
 withCLProgram :: CLProgram -> (Ptr () -> IO a) -> IO a
 withCLProgram (CLProgram p) f = withForeignPtr p $ f . castPtr
 
+-- Note: cl_mem's aren't retained when they're set as kernel arguments.
+-- Rather, they're only retained while the kernel is running, and released
+-- once it's finished.
+-- So if we tried storing them in a ForeignPtr like the other types,
+-- we could get the following race:
+-- 1. Create CLMem for an input argument
+-- 2. Call OpenCL to fill it with values
+-- 3. Set it as a kernel arg
+-- 4. Haskell GC
+-- 5. Run kernel
+-- If the CLMem is never used after step 5, it will be released prematurely
+-- in step 4.  
 data CLMem_
-newtype CLMem = CLMem (ForeignPtr CLMem_)
-withCLMem :: CLMem -> (Ptr () -> IO a) -> IO a
-withCLMem (CLMem p) f = withForeignPtr p $ f . castPtr
+newtype CLMem a = CLMem (Ptr CLMem_)
+withCLMem :: CLMem a -> (Ptr () -> IO b) -> IO b
+withCLMem (CLMem p) f = f $ castPtr p
 
 data CLKernel_
 newtype CLKernel = CLKernel (ForeignPtr CLKernel_)

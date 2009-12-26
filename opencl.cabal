@@ -17,8 +17,8 @@ exposed-modules:
     OpenCL.Context
     OpenCL.Program
     OpenCL.CommandQueue
-    OpenCL.Buffer
     OpenCL.Kernel
+    OpenCL.Memory
     OpenCL
     OpenCL.Simple
 other-modules:

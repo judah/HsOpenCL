@@ -1,23 +1,22 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Test1 where
+module Main where
 
 import OpenCL
 
 import Foreign
 import Foreign.C
 
+import System.Environment
+
 import Control.Exception
-showDevice dev = clDeviceVendor dev >>= print 
-                >> clDeviceName dev >>= print
 
-test1 = do
-    getDeviceID DeviceTypeCPU >>= showDevice
-    getDeviceID DeviceTypeGPU >>= showDevice
-
-test2 file = do
+main = do
+    [n] <- getArgs
+    let file = "test_prog.cl"
     contents <- readFile file
     dev <- getDeviceID DeviceTypeGPU
-    context <- createContext dev
+    print ("device:",dev)
+    context <- createContext [dev]
     queue <- createCommandQueue context dev []
     prog <- createProgramWithSource context [contents]
     print "Created!"
@@ -31,16 +30,17 @@ test2 file = do
     kernel <- clCreateKernel prog "add"
     print "Kernel!"
     -- Allocate the buffers...
-    let size = 32 :: Int
+    let size = read n :: Int
     let n = toEnum size
     a :: Ptr Float <- newArray [0..n-1]
     b :: Ptr Float <- newArray [n-1,n-2..0]
     results :: Ptr Float <- newArray $ replicate size 0
-    aMem <- createBuffer context [CLMemReadOnly] size a
+    aMem <- createBuffer context CLMemReadOnly NoHostPtr size
     enqueueWriteBuffer queue aMem size a
-    bMem <- createBuffer context [CLMemReadOnly] size b
+    bMem <- createBuffer context CLMemReadOnly NoHostPtr size
     enqueueWriteBuffer queue bMem size b
-    ansMem <- createBuffer context [CLMemReadWrite] size a
+    ansMem <- createBuffer context CLMemReadWrite NoHostPtr size
+    putStrLn "Allocated buffers."
     clFinish queue
     putStrLn "Finished copying to buffers."
     -- Kernel arguments
@@ -55,6 +55,6 @@ test2 file = do
     enqueueReadBuffer queue ansMem size results
     clFinish queue
     putStrLn "Results are:"
-    peekArray size results >>= print
+    peekArray size results >>= print . take 10
 
 

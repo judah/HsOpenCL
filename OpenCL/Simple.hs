@@ -141,27 +141,31 @@ withArgs (ReadWrite x:xs) f = withIOCArray x $ \p -> withArgs xs
 withArgs (WriteOnly x:xs) f = withIOCArray x $ \p -> withArgs xs
                                 $ \ys -> f (WriteOnlyPtr p:ys)
 
+-- Being lazy (since I'll end up rewriting this anyway...)
+-- and casting everything to CLMem ().
+
 -- TODO: be more efficient
 -- We have to be careful since we don't want it to be freed
-bufferArg :: SimpleProgram -> Int -> KernelPtrArg -> IO CLMem
+bufferArg :: SimpleProgram -> Int -> KernelPtrArg -> IO (CLMem ())
 bufferArg cxt size (ReadOnlyPtr p) = do
-    mem <- createBuffer (simpleCxt cxt) [CLMemReadOnly] size p
+    mem <- createBuffer (simpleCxt cxt) CLMemReadOnly NoHostPtr size
     enqueueWriteBuffer (simpleQueue cxt) mem size p
-    return mem
+    return $ castCLMem mem
 bufferArg cxt size (ReadWritePtr p) = do
-    mem <- createBuffer (simpleCxt cxt) [CLMemReadWrite] size p
+    mem <- createBuffer (simpleCxt cxt) CLMemReadWrite NoHostPtr size
     enqueueWriteBuffer (simpleQueue cxt) mem size p
-    return mem
-bufferArg cxt size (WriteOnlyPtr p) = do
-    createBuffer (simpleCxt cxt) [CLMemWriteOnly] size p
+    return $ castCLMem mem
+bufferArg cxt size (WriteOnlyPtr (p::Ptr a)) = fmap castCLMem
+    (createBuffer (simpleCxt cxt) CLMemWriteOnly NoHostPtr size
+        :: IO (CLMem a))
 
 
-copyMutableArg :: CLCommandQueue -> Int -> CLMem -> KernelPtrArg -> IO ()
+copyMutableArg :: CLCommandQueue -> Int -> CLMem () -> KernelPtrArg -> IO ()
 copyMutableArg _ _ _ (ReadOnlyPtr _) = return ()
 copyMutableArg queue size mem (WriteOnlyPtr p) =
-    enqueueReadBuffer queue mem size p
+    enqueueReadBuffer queue (castCLMem mem) size p
 copyMutableArg queue size mem (ReadWritePtr p) =
-    enqueueReadBuffer queue mem size p
+    enqueueReadBuffer queue (castCLMem mem) size p
      
 
 
