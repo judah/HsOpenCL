@@ -7,6 +7,7 @@ module OpenCL.CommandQueue(
                 clFinish,
                 -- * Querying info and properties
                 clQueueDevice,
+                clQueueContext,
                 clQueueProperties,
                 setCommandQueueProperty,
                 ) where
@@ -15,6 +16,7 @@ module OpenCL.CommandQueue(
 import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
+import OpenCL.Context.Retainer
 
 import Control.Monad
 
@@ -74,12 +76,14 @@ storableInfo info queue = alloca $ \p -> do
     clGetCommandQueueInfo queue info (sizeOf (undefined :: a)) (castPtr p)
     peek p
 
--- TODO: CLQueueContext: retain it and stick it into a ForeignPtr.
+-- careful of a race:
+clQueueContext :: CLCommandQueue -> CLContext
+clQueueContext q@(CLCommandQueue fp)
+    = unsafePerformIO $ storableInfo CLQueueContext q
+                            >>= retainedContextInfo fp
 
 clQueueDevice :: CLCommandQueue -> CLDeviceID
 clQueueDevice = CLDeviceID . unsafePerformIO . storableInfo CLQueueDevice
-
--- Getting a device, which must be split, means we 
 
 clQueueProperties :: CLCommandQueue -> IO [CLCommandQueueProperties]
 clQueueProperties queue = do

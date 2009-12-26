@@ -20,6 +20,8 @@ import Foreign
 import Control.Applicative
 import Control.Monad
 
+-- TODO: this isn't really necessary, since
+-- all of the types can ask for their context/id/etc.
 data SimpleContext = SimpleContext {
                         simpleID :: CLDeviceID
                         , simpleCxt :: CLContext

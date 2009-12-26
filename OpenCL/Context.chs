@@ -11,6 +11,7 @@ import OpenCL.Error
 import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Platform.Foreign
+import OpenCL.Context.Retainer
 
 import Control.Applicative
 
@@ -24,9 +25,6 @@ import Control.Applicative
   , alloca- `CInt' checkSuccessPtr*-
   } -> `CLContext' newCLContext*
 #}
-
-newCLContext = newData CLContext clReleaseContext
-foreign import ccall "&" clReleaseContext :: Releaser CLContext_
 
 createContext :: [CLDeviceID] -> IO CLContext
 createContext devices = withArrayLen (map _clDeviceIDPtr devices) $ \n ps ->
