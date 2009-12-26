@@ -1,1 +1,0 @@
-#include <OpenCL/OpenCL.h>

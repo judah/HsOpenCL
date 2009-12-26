@@ -10,7 +10,6 @@ maintainer:          judah.jacobson@gmail.com
 build-depends:       base>=4, haskell98, carray
 build-type:          Simple
 ghc-options:         
-include-dirs: includes
 build-tools: c2hs
 exposed-modules:
     OpenCL.Error
@@ -26,8 +25,6 @@ other-modules:
     OpenCL.Helpers.C2HS
     OpenCL.Helpers.Types
     OpenCL.Platform.Foreign
-c-sources: cbits/opencl_wrappers.c
-includes: opencl_wrappers.h
 extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
             ScopedTypeVariables, TypeSynonymInstances, FlexibleInstances,
             GADTs
