@@ -29,4 +29,5 @@ extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
             ScopedTypeVariables, TypeSynonymInstances, FlexibleInstances,
             GADTs
 frameworks: OpenCL
-ghc-options:
+-- Note: -fvia-C prevents a segfault (ghc trac #3789)
+ghc-options: -fvia-C
