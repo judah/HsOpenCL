@@ -30,7 +30,7 @@ deviceTypeEnum t = cEnum t
   , deviceTypeEnum `CLDeviceType'
   , `Int'
   ,  castPtr `Ptr (Ptr _CLDeviceID)'
-  , alloca- `Int' peekIntConv* -- To be ignored
+  , alloca- `Int' peekIntConv*
   } -> `Int' checkSuccess*-
 #}
 
