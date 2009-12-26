@@ -49,8 +49,9 @@ getKernel = clCreateKernel
 
 -- Add note that Doubles probably won't work...
 data KernelArg where
-    Immutable :: Storable a => CArray Int a -> KernelArg
-    Mutable :: Storable a => IOCArray Int a -> KernelArg
+    ReadOnly :: Storable a => CArray Int a -> KernelArg
+    ReadWrite :: Storable a => IOCArray Int a -> KernelArg
+    WriteOnly :: Storable a => IOCArray Int a -> KernelArg
     -- TODO: just a pure output...
 
 -- TODO: should kernel contain ref to context?
@@ -81,37 +82,45 @@ getCommonSize ks = do
         else return size
   where
     getArgSize :: KernelArg -> IO Int
-    getArgSize (Immutable a) = return $ rangeSize $ bounds a
-    getArgSize (Mutable a) = rangeSize <$> getBounds a
+    getArgSize (ReadOnly a) = return $ rangeSize $ bounds a
+    getArgSize (ReadWrite a) = rangeSize <$> getBounds a
+    getArgSize (WriteOnly a) = rangeSize <$> getBounds a
 
 data KernelPtrArg where
-    ImmutablePtr :: Storable a =>  Ptr a -> KernelPtrArg
-    MutablePtr :: Storable a => Ptr a -> KernelPtrArg
+    ReadOnlyPtr :: Storable a =>  Ptr a -> KernelPtrArg
+    ReadWritePtr :: Storable a => Ptr a -> KernelPtrArg
+    WriteOnlyPtr :: Storable a => Ptr a -> KernelPtrArg
 
 -- make sure we retain the ForeignPtrs for the whole computation:
 withArgs :: [KernelArg] -> ([KernelPtrArg] -> IO a) -> IO a
 withArgs [] f = f []
-withArgs (Immutable x:xs) f = withCArray x $ \p -> withArgs xs 
-                                $ \ys -> f (ImmutablePtr p:ys)
-withArgs (Mutable x:xs) f = withIOCArray x $ \p -> withArgs xs
-                                $ \ys -> f (MutablePtr p:ys)
+withArgs (ReadOnly x:xs) f = withCArray x $ \p -> withArgs xs 
+                                $ \ys -> f (ReadOnlyPtr p:ys)
+withArgs (ReadWrite x:xs) f = withIOCArray x $ \p -> withArgs xs
+                                $ \ys -> f (ReadWritePtr p:ys)
+withArgs (WriteOnly x:xs) f = withIOCArray x $ \p -> withArgs xs
+                                $ \ys -> f (WriteOnlyPtr p:ys)
 
 -- TODO: be more efficient
 -- We have to be careful since we don't want it to be freed
 bufferArg :: SimpleContext -> Int -> KernelPtrArg -> IO CLMem
-bufferArg cxt size (ImmutablePtr p) = do
+bufferArg cxt size (ReadOnlyPtr p) = do
     mem <- createBuffer (simpleCxt cxt) [CLMemReadOnly] size p
     enqueueWriteBuffer (simpleQueue cxt) mem size p
     return mem
-bufferArg cxt size (MutablePtr p) = do
+bufferArg cxt size (ReadWritePtr p) = do
     mem <- createBuffer (simpleCxt cxt) [CLMemReadWrite] size p
     enqueueWriteBuffer (simpleQueue cxt) mem size p
     return mem
+bufferArg cxt size (WriteOnlyPtr p) = do
+    createBuffer (simpleCxt cxt) [CLMemWriteOnly] size p
 
 
 copyMutableArg :: CLCommandQueue -> Int -> CLMem -> KernelPtrArg -> IO ()
-copyMutableArg _ _ _ (ImmutablePtr _) = return ()
-copyMutableArg queue size mem (MutablePtr p) =
+copyMutableArg _ _ _ (ReadOnlyPtr _) = return ()
+copyMutableArg queue size mem (WriteOnlyPtr p) =
+    enqueueReadBuffer queue mem size p
+copyMutableArg queue size mem (ReadWritePtr p) =
     enqueueReadBuffer queue mem size p
      
 
