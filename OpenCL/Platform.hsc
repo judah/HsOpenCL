@@ -86,6 +86,9 @@ getDeviceIDs dtype = do
     n' <- clGetDeviceIDs nullPtr dtype n p
     peekArray n' p >>= return . map CLDeviceID
 
+-- TODO: Orphan instance...
+instance Show CLDeviceID where
+    show dev = "<" ++ clDeviceVendor dev ++ " " ++ clDeviceName dev ++ ">"
 ---------------
 
 class DeviceInfoType a where
