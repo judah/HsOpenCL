@@ -61,6 +61,17 @@ data KernelArg where
 -- TODO: some sort of class structure so we can make pure functions...
 -- TODO: Use that so we don't need to create new buffers each time...
 -- And don't need to check sizes each time, either.
+--
+-- Really what we want is
+-- class KernelFunc f where
+--
+-- instance Storable a => KernelFunc (CArray Int a)
+-- instance Storable a => KernelFunc (CArray Int a, CArray Int a)
+-- etc.
+-- instance KernelFunc f, Storable a => KernelFunc (CArray Int a -> f)
+-- instance KernelFunc f, Storable a => KernelFunc (IOCArray Int a -> f) 
+--
+-- And then of course deal with 2d and 3d data...
 runKernel :: SimpleContext -> CLKernel -> [KernelArg] -> IO ()
 runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     let queue = simpleQueue cxt
