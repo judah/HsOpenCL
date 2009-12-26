@@ -112,6 +112,7 @@ runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     clFinish queue
     zipWithM_ (copyMutableArg queue size) mems argPtrs
     clFinish queue
+    mapM_ clReleaseMemObject mems
 
 getCommonSize :: [KernelArg] -> IO Int
 getCommonSize [] = error "No kernel arguments"

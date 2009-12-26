@@ -5,6 +5,8 @@ module OpenCL.Memory(
                 createBuffer,
                 CLMemAccess(..),
                 CLMemInit(..),
+                clRetainMemObject,
+                clReleaseMemObject,
                 -- * Reading, writing and copying buffers
                 enqueueReadBuffer,
                 enqueueReadBufferOff,
@@ -169,3 +171,14 @@ enqueueCopyBufferOff queue source dest srcOff destOff size
             (destOff * eltWidth)
             (size * eltWidth) 0 nullPtr nullPtr
   where eltWidth = sizeOf (undefined :: a)
+
+
+{#fun clRetainMemObject
+  { withCLMem* `CLMem a'
+  } -> `Int' checkSuccess-
+#}
+
+{#fun clReleaseMemObject
+  { withCLMem* `CLMem a'
+  } -> `Int' checkSuccess-
+#}

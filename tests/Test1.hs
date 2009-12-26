@@ -54,6 +54,7 @@ main = do
     putStrLn "Finished running!"
     enqueueReadBuffer queue ansMem size results
     clFinish queue
+    mapM_ clReleaseMemObject [aMem,bMem,ansMem]
     putStrLn "Results are:"
     peekArray size results >>= print . take 10
 
