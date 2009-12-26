@@ -20,7 +20,7 @@ newData construct release p = construct <$> newForeignPtr release (castPtr p)
 -- Note that unlike the others, CLDeviceID has no way to be released
 -- so it's just a pointer.
 data CLDeviceID_
-newtype CLDeviceID = CLDeviceID (Ptr CLDeviceID_)
+newtype CLDeviceID = CLDeviceID {_clDeviceIDPtr :: Ptr CLDeviceID_}
 clDeviceIDPtr :: CLDeviceID -> Ptr ()
 clDeviceIDPtr (CLDeviceID p) = castPtr p
 

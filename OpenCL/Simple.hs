@@ -29,7 +29,7 @@ data SimpleContext = SimpleContext {
 newSimpleContext :: CLDeviceType -> IO SimpleContext
 newSimpleContext devType = do
     devID <- getDeviceID devType
-    cxt <- createContext devID
+    cxt <- createContext [devID]
     queue <- clCreateCommandQueue cxt devID []
     return $ SimpleContext devID cxt queue
 
