@@ -39,7 +39,7 @@ deviceTypeEnum t = cEnum t
  , `Int'
  , `Int'
  , castPtr `Ptr a'
- , alloca- `Int' return*-
+ , alloca- `Int' peekIntConv*
  } -> `Int' checkSuccess*-
 #}
 

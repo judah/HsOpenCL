@@ -63,9 +63,5 @@ enum CLContextInfo {
 {#enum CLContextInfo {} #}
 
 clContextDevices :: CLContext -> [CLDeviceID]
-clContextDevices context = unsafePerformIO $ do
-    size <- clGetContextInfo context CLContextDevices 0 nullPtr 
-    let numDevices = size `div` sizeOf (undefined :: Ptr CLDeviceID_)
-    allocaArray numDevices $ \p -> do
-    clGetContextInfo context CLContextDevices size (castPtr p)
-    map CLDeviceID <$> peekArray numDevices p
+clContextDevices context = map CLDeviceID
+        $ getPureProp (clGetContextInfo context CLContextDevices)

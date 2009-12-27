@@ -91,67 +91,20 @@ instance Show CLDeviceID where
     show dev = "<" ++ clDeviceVendor dev ++ " " ++ clDeviceName dev ++ ">"
 ---------------
 
-class DeviceInfoType a where
-    deviceInfo :: Int -> CLDeviceID -> a
-
-instance DeviceInfoType String where
-    deviceInfo = stringInfo
-
-stringInfo :: Int -> CLDeviceID -> String
-stringInfo devInfo devID = unsafePerformIO $ 
-    allocaBytes infoStrLen $ \c_str -> do
-        clGetDeviceInfo devID devInfo infoStrLen c_str
-        peekCString c_str
-  where
-    infoStrLen = 1024
-
-storableInfo :: forall a b . (Storable a, Integral a, Num b)
-                        => a -> Int -> CLDeviceID -> b
-storableInfo _ devInfo devID = unsafePerformIO $ alloca $ \(p::Ptr a) -> do
-    clGetDeviceInfo devID devInfo size p
-    fromIntegral <$> peek p
-  where
-    size = sizeOf (undefined :: a)
-
-instance DeviceInfoType Int where
-    deviceInfo = storableInfo (undefined :: #type cl_int)
+deviceInfo :: Property a => Int -> CLDeviceID -> a
+deviceInfo prop dev = getPureProp (clGetDeviceInfo dev prop)
 
 type Size = #type size_t
 type ULong = #type cl_ulong
 
-instance DeviceInfoType Size where
-    deviceInfo = storableInfo (undefined :: #type size_t)
-
-instance DeviceInfoType ULong where
-    deviceInfo = storableInfo (undefined :: #type cl_ulong)
-
-instance DeviceInfoType Bool where
-    deviceInfo t d = (/=0) (storableInfo (undefined :: #type cl_bool)
-                                    t d :: Int)
-
-instance DeviceInfoType [Size] where
-    deviceInfo = sizeArrayInfo
-
-sizeArrayInfo :: Int -> CLDeviceID -> [Size]
-sizeArrayInfo devInfo devID = unsafePerformIO $ allocaArray numDims $ \p -> do
-    clGetDeviceInfo devID devInfo (sizeOf (undefined :: Size) * numDims) p
-    peekArray numDims p
-  where
-    numDims = clDeviceMaxWorkItemDimensions devID
-        
-enumInfo :: forall a b . (Storable a, Integral a, Enum b) => a -> Int -> CLDeviceID -> b
-enumInfo dummy devInfo devID = toEnum (storableInfo dummy devInfo devID :: Int)
-
-bitfieldInfo :: forall a b . (Storable a, Integral a, Enum b)
-                                    => a -> Int -> [b] -> CLDeviceID -> [b]
-bitfieldInfo dummy devInfo props devID = filter isOne props
-  where
-    bitfield = storableInfo dummy devInfo devID :: Int
-    isOne e = 0 /= (fromEnum e .&. bitfield)
-
-clDeviceType :: CLDeviceID -> CLDeviceType
-clDeviceType = enumInfo (undefined :: #type cl_device_type)
-                        (#const CL_DEVICE_TYPE)
+-- Don't worrry about overflow; the spec says that CL_DEVICE_TYPE_ALL
+-- won't be returned.
+clDeviceType :: CLDeviceID -> [CLDeviceType]
+clDeviceType d = unsafePerformIO $ getFlags
+                        (clGetDeviceInfo d (#const CL_DEVICE_TYPE))
+                        [DeviceTypeCPU, DeviceTypeGPU
+                        , DeviceTypeAccelerator, DeviceTypeDefault
+                        ]
 
 clDeviceVendorId :: CLDeviceID -> Int
 clDeviceVendorId = deviceInfo (#const CL_DEVICE_VENDOR_ID)
@@ -285,17 +238,15 @@ clDeviceExtensions = deviceInfo (#const CL_DEVICE_EXTENSIONS)
 --------
 
 clDeviceQueueProperties :: CLDeviceID -> [CLCommandQueueProperties]
-clDeviceQueueProperties = bitfieldInfo
-                            (undefined :: #type cl_command_queue_properties)
-                            (#const CL_DEVICE_QUEUE_PROPERTIES)
+clDeviceQueueProperties dev = unsafePerformIO
+        $ getFlags (clGetDeviceInfo dev (#const CL_DEVICE_QUEUE_PROPERTIES))
                             [CLQueueOutOfOrderExecModeEnable
                             , CLQueueProfilingEnable
                             ]
 
 clDeviceSingleFpConfig :: CLDeviceID -> [CLDeviceFPConfig]
-clDeviceSingleFpConfig = bitfieldInfo
-                            (undefined :: #type cl_device_fp_config)
-                            (#const CL_DEVICE_SINGLE_FP_CONFIG)
+clDeviceSingleFpConfig dev = unsafePerformIO
+        $ getFlags (clGetDeviceInfo dev (#const CL_DEVICE_SINGLE_FP_CONFIG))
                             [ CLFPDenorm
                             , CLFPInfNan
                             , CLFPRoundToNearest

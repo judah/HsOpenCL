@@ -192,7 +192,7 @@ enqueueCopyBufferOff queue source dest srcOff destOff size
 #}
 
 
-{#fun clGetMemObjectInfo
+{#fun clGetMemObjectInfo as getMemInfo
   { withCLMem* `CLMem a'
   , cEnum `CLMemInfo'
   , `Int'
@@ -214,35 +214,28 @@ enum CLMemInfo {
 #endc
 {#enum CLMemInfo {} #}
 
-storableInfo :: forall a b . Storable a => CLMemInfo -> CLMem b -> IO a
-storableInfo info mem = alloca $ \p -> do
-    retSize <- clGetMemObjectInfo mem info (sizeOf (undefined :: a)) (castPtr p)
-    peek p
-
 
 clMemFlags :: CLMem a -> (CLMemAccess, CLMemInit a)
-clMemFlags m = unsafePerformIO $ do
-    bitmask :: CULLong <- storableInfo CLMemFlags m
-    let exists = containsBitMask bitmask
-    memInit <- getMemInitFlags exists
-    return (accessFlag exists,memInit)
+clMemFlags m = (accessFlag exists, memInit)
   where
+    exists = getPureProp (getMemInfo m CLMemFlags)
+    memInit = getMemInitFlags exists
     accessFlag exists
         | exists CLMemReadOnly_ = CLMemReadOnly
         | exists CLMemWriteOnly_ = CLMemWriteOnly
         | otherwise = CLMemReadWrite
-    getPtrProp constr = constr <$> storableInfo CLMemHostPtr m
+    getPtrProp constr = constr $ getPureProp (getMemInfo m CLMemHostPtr)
     getMemInitFlags exists
         | exists CLMemUseHostPtr_   = getPtrProp UseHostPtr
         | exists CLMemCopyHostPtr_
             = if exists CLMemAllocHostPtr_ then getPtrProp CopyAllocHostPtr
                     else getPtrProp CopyHostPtr
-        | exists CLMemAllocHostPtr_ = return AllocHostPtr
-        | otherwise = return NoHostPtr
+        | exists CLMemAllocHostPtr_ = AllocHostPtr
+        | otherwise = NoHostPtr
         
 
 clMemSize :: forall a . Storable a => CLMem a -> Int
-clMemSize m = fromEnum (unsafePerformIO $ storableInfo CLMemSize m :: CInt)
+clMemSize m = getPureProp (getMemInfo m CLMemSize)
                 `div` sizeOf (undefined :: a)
 
 -- Since the Mem doesn't have an associated finalizer, we don't have to
@@ -252,8 +245,9 @@ clMemSize m = fromEnum (unsafePerformIO $ storableInfo CLMemSize m :: CInt)
 -- to expect that the CLMem (and thus, OpenCL ensures, the CLContext) isn't
 -- freed by other threads during this computation.
 clMemContext :: CLMem a -> CLContext
-clMemContext m = unsafePerformIO $ storableInfo CLMemContext m >>= newCLContext
+clMemContext m = unsafePerformIO $
+                    getProp (getMemInfo m CLMemContext) >>= newCLContext
 
 clGetMemReferenceCount :: CLMem a -> IO Int
-clGetMemReferenceCount m = fromEnum <$>
-        (storableInfo CLMemReferenceCount m :: IO CInt)
+clGetMemReferenceCount m
+    = getProp (getMemInfo m CLMemReferenceCount)

@@ -5,8 +5,10 @@ module OpenCL.Helpers.Types where
 import Foreign
 import Foreign.C
 import Control.Applicative
+import Control.Monad
 
 import OpenCL.Error
+import OpenCL.Helpers.C2HS
 
 -- I'm assuming that types like cl_device_id are actually pointers,
 -- so they can be passed around by the FFI.
@@ -91,4 +93,73 @@ newtype CLKernel = CLKernel (ForeignPtr CLKernel_)
 withCLKernel :: CLKernel -> (Ptr () -> IO a) -> IO a
 withCLKernel (CLKernel p) f = withForeignPtr p $ f . castPtr
 
+---------
+-- Most of the types have a clGet*Info function following the same
+-- template;
+-- here's some boilerplace.
+--
+-- Note this code is somewhat platform-dependent.
 
+-- We should have c2hs export them so that the last parameters look
+-- like:
+type GetInfoFunc = Int -> Ptr () -> IO Int
+
+storableInfo :: forall a . Storable a => GetInfoFunc -> IO a
+storableInfo getInfo = alloca $ \p -> do
+    retSize <- getInfo size (castPtr p)
+    -- Double-check we got the types correct:
+    -- Note that if a bitfield has no values set, the retSize may be 0.
+    when (retSize /= size && retSize > 0)
+        $ error $ 
+            "storableInfo: Incorrect property size: expected " ++ show size
+                    ++ ", got: " ++ show retSize
+    peek p
+  where size = sizeOf (undefined :: a)
+
+class Property a where
+    getProp :: GetInfoFunc -> IO a
+
+getPureProp :: Property a => GetInfoFunc -> a
+getPureProp = unsafePerformIO . getProp
+
+instance Property Int where
+    getProp getInfo = fromEnum <$> (storableInfo getInfo :: IO CInt)
+
+instance Property Bool where
+    getProp getInfo = (/=0) <$> (storableInfo getInfo :: IO CInt)
+
+instance Property (Ptr a) where
+    getProp = storableInfo
+
+instance Property Word32 where
+    getProp = storableInfo
+
+instance Property Word64 where
+    getProp = storableInfo
+    
+instance Enum a => Property (a -> Bool) where
+    getProp getInfo = do
+        bitmask :: CULLong <- storableInfo getInfo
+        return (containsBitMask bitmask)
+
+getFlags :: Enum a => GetInfoFunc -> [a] -> IO [a]
+getFlags getInfo fs = getProp getInfo >>= return . flip filter fs
+
+instance Storable a => Property [a] where
+    getProp getInfo = do
+        retSize <- getInfo 0 nullPtr
+        getArrayN (retSize `div` sizeOf (undefined :: a)) getInfo
+
+instance Property String where
+    getProp getInfo = do
+        size <- getInfo 0 nullPtr
+        allocaArray size $ \p -> do
+        getInfo size (castPtr p)
+        peekCString p
+
+getArrayN :: forall a . Storable a => Int -> GetInfoFunc -> IO [a]
+getArrayN numEntries getInfo = allocaArray numEntries $ \p -> do
+        getInfo numBytes (castPtr p)
+        peekArray numEntries p
+  where
+    numBytes = numEntries * sizeOf (undefined :: a)

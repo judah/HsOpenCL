@@ -60,7 +60,7 @@ enum CLCommandQueueInfo {
 };
 #endc
 {#enum CLCommandQueueInfo {}#}
-{#fun clGetCommandQueueInfo as clGetCommandQueueInfo 
+{#fun clGetCommandQueueInfo as getInfo
   { withCLCommandQueue* `CLCommandQueue'
   , cEnum `CLCommandQueueInfo'
   , `Int'
@@ -69,12 +69,6 @@ enum CLCommandQueueInfo {
   } -> `Int' checkSuccess*-
 #}
 
-storableInfo :: forall a . Storable a
-    => CLCommandQueueInfo -> CLCommandQueue -> IO a
-storableInfo info queue = alloca $ \p -> do
-    clGetCommandQueueInfo queue info (sizeOf (undefined :: a)) (castPtr p)
-    peek p
-
 -- careful of a race:
 -- If the ForeignPtr is GC'd in the middle of this computation
 -- and releases the CommandQueue, OpenCL could release the CLContext also.
@@ -82,15 +76,14 @@ storableInfo info queue = alloca $ \p -> do
 clQueueContext :: CLCommandQueue -> CLContext
 clQueueContext q@(CLCommandQueue fp)
     = unsafePerformIO $ withForeignPtr fp $ \_ ->
-            storableInfo CLQueueContext q >>= retainedCLContext
+            getProp (getInfo q CLQueueContext)
+                >>= retainedCLContext
 
 clQueueDevice :: CLCommandQueue -> CLDeviceID
-clQueueDevice = CLDeviceID . unsafePerformIO . storableInfo CLQueueDevice
+clQueueDevice q = CLDeviceID $ getPureProp $ getInfo q CLQueueDevice
 
 clQueueProperties :: CLCommandQueue -> IO [CLCommandQueueProperties]
-clQueueProperties queue = do
-    bitmask :: CULLong <- storableInfo CLQueueProperties queue
-    return $ filter (containsBitMask bitmask)
+clQueueProperties queue = getFlags (getInfo queue CLQueueProperties)
                             [ CLQueueOutOfOrderExecModeEnable
                             , CLQueueProfilingEnable
                             ]
