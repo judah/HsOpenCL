@@ -1,4 +1,4 @@
-module OpenCL.Error(CLError,
+module OpenCL.Error(CLError(..),
                checkSuccess,
                checkSuccessPtr)  where
 
