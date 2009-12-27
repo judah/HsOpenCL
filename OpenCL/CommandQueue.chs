@@ -76,10 +76,13 @@ storableInfo info queue = alloca $ \p -> do
     peek p
 
 -- careful of a race:
+-- If the ForeignPtr is GC'd in the middle of this computation
+-- and releases the CommandQueue, OpenCL could release the CLContext also.
+-- So make sure the CommandQueue stays alive throughout.
 clQueueContext :: CLCommandQueue -> CLContext
 clQueueContext q@(CLCommandQueue fp)
-    = unsafePerformIO $ storableInfo CLQueueContext q
-                            >>= retainedContextInfo fp
+    = unsafePerformIO $ withForeignPtr fp $ \_ ->
+            storableInfo CLQueueContext q >>= retainedCLContext
 
 clQueueDevice :: CLCommandQueue -> CLDeviceID
 clQueueDevice = CLDeviceID . unsafePerformIO . storableInfo CLQueueDevice

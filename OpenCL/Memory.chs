@@ -14,6 +14,11 @@ module OpenCL.Memory(
                 enqueueWriteBufferOff,
                 enqueueCopyBuffer,
                 enqueueCopyBufferOff,
+                -- * Properties
+                clMemFlags,
+                clMemSize,
+                clMemContext,
+                clGetMemReferenceCount,
                 ) where
 
 #include <OpenCL/OpenCL.h>
@@ -21,6 +26,7 @@ import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
 import Data.Maybe
+import Control.Applicative
 
 -- TODO
 -- Events/blocking
@@ -56,11 +62,13 @@ newCLMem :: Ptr () -> CLMem a
 newCLMem = CLMem . castPtr
 
 data CLMemAccess = CLMemReadWrite | CLMemWriteOnly | CLMemReadOnly
+                    deriving (Show,Eq)
 
 data CLMemInit a = NoHostPtr | UseHostPtr (Ptr a)
                         | CopyHostPtr (Ptr a)
                         | AllocHostPtr
                         | CopyAllocHostPtr (Ptr a)
+                    deriving (Show,Eq)
 
 createBuffer :: forall a . Storable a
         => CLContext -> CLMemAccess -> CLMemInit a -> Int -> IO (CLMem a)
@@ -182,3 +190,70 @@ enqueueCopyBufferOff queue source dest srcOff destOff size
   { withCLMem* `CLMem a'
   } -> `Int' checkSuccess-
 #}
+
+
+{#fun clGetMemObjectInfo
+  { withCLMem* `CLMem a'
+  , cEnum `CLMemInfo'
+  , `Int'
+  , id `Ptr ()'
+  , alloca- `Int' peekIntConv*
+  } -> `Int' checkSuccess *-
+#}
+
+#c
+enum CLMemInfo {
+    CLMemType = CL_MEM_TYPE,
+    CLMemFlags = CL_MEM_FLAGS,
+    CLMemSize = CL_MEM_SIZE,
+    CLMemHostPtr = CL_MEM_HOST_PTR,
+    CLMemMapCount = CL_MEM_MAP_COUNT,
+    CLMemReferenceCount = CL_MEM_REFERENCE_COUNT,
+    CLMemContext = CL_MEM_CONTEXT
+};
+#endc
+{#enum CLMemInfo {} #}
+
+storableInfo :: forall a b . Storable a => CLMemInfo -> CLMem b -> IO a
+storableInfo info mem = alloca $ \p -> do
+    retSize <- clGetMemObjectInfo mem info (sizeOf (undefined :: a)) (castPtr p)
+    peek p
+
+
+clMemFlags :: CLMem a -> (CLMemAccess, CLMemInit a)
+clMemFlags m = unsafePerformIO $ do
+    bitmask :: CULLong <- storableInfo CLMemFlags m
+    let exists = containsBitMask bitmask
+    memInit <- getMemInitFlags exists
+    return (accessFlag exists,memInit)
+  where
+    accessFlag exists
+        | exists CLMemReadOnly_ = CLMemReadOnly
+        | exists CLMemWriteOnly_ = CLMemWriteOnly
+        | otherwise = CLMemReadWrite
+    getPtrProp constr = constr <$> storableInfo CLMemHostPtr m
+    getMemInitFlags exists
+        | exists CLMemUseHostPtr_   = getPtrProp UseHostPtr
+        | exists CLMemCopyHostPtr_
+            = if exists CLMemAllocHostPtr_ then getPtrProp CopyAllocHostPtr
+                    else getPtrProp CopyHostPtr
+        | exists CLMemAllocHostPtr_ = return AllocHostPtr
+        | otherwise = return NoHostPtr
+        
+
+clMemSize :: forall a . Storable a => CLMem a -> Int
+clMemSize m = fromEnum (unsafePerformIO $ storableInfo CLMemSize m :: CInt)
+                `div` sizeOf (undefined :: a)
+
+-- Since the Mem doesn't have an associated finalizer, we don't have to
+-- worry about races like we do in clQueue.
+-- Well, there's still a tiny race if another thread releases the Mem and 
+-- context in the middle of our computation; but it's reasonable
+-- to expect that the CLMem (and thus, OpenCL ensures, the CLContext) isn't
+-- freed by other threads during this computation.
+clMemContext :: CLMem a -> CLContext
+clMemContext m = unsafePerformIO $ storableInfo CLMemContext m >>= newCLContext
+
+clGetMemReferenceCount :: CLMem a -> IO Int
+clGetMemReferenceCount m = fromEnum <$>
+        (storableInfo CLMemReferenceCount m :: IO CInt)

@@ -44,6 +44,10 @@ foreign import ccall "&" clReleaseContext :: Releaser CLContext_
   } -> `Int' checkSuccess*-
 #}
 
+-- Note: be careful of races if the child is a ForeignPtr.  (See clQueueContext).
+retainedCLContext :: Ptr () -> IO CLContext
+retainedCLContext p = clRetainContext p >> newCLContext p
+
 -- Being careful of race conditions:
 -- The foreignptr points back to the context, and if it's GC'd
 -- it could cause the context to be released prematurely.
