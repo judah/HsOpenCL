@@ -7,56 +7,56 @@ import Language.Haskell.TH
 
 allNames :: [Name]
 allNames = [
-            'clDeviceType
-            , 'clDeviceVendorId
-            ,'clDeviceMaxComputeUnits
-            ,'clDeviceMaxWorkItemDimensions
-            ,'clDeviceMaxWorkGroupSize
-            ,'clDeviceMaxWorkItemSizes
-            ,'clDevicePreferredVectorWidthChar
-            ,'clDevicePreferredVectorWidthShort
-            ,'clDevicePreferredVectorWidthInt
-            ,'clDevicePreferredVectorWidthLong
-            ,'clDevicePreferredVectorWidthFloat
-            ,'clDevicePreferredVectorWidthDouble
-            ,'clDeviceMaxClockFrequency
-            ,'clDeviceAddressBits
-            ,'clDeviceMaxReadImageArgs
-            ,'clDeviceMaxWriteImageArgs
-            ,'clDeviceMaxMemAllocSize
-            ,'clDeviceImage2dMaxWidth
-            ,'clDeviceImage2dMaxHeight
-            ,'clDeviceImage3dMaxWidth
-            ,'clDeviceImage3dMaxHeight
-            ,'clDeviceImage3dMaxDepth
-            ,'clDeviceImageSupport
-            ,'clDeviceMaxParameterSize
-            ,'clDeviceMaxSamplers
-            ,'clDeviceMemBaseAddrAlign
-            ,'clDeviceMinDataTypeAlignSize
-            ,'clDeviceSingleFpConfig
-            -- ,'clDeviceGlobalMemCacheType
-            ,'clDeviceGlobalMemCachelineSize
-            ,'clDeviceGlobalMemCacheSize
-            ,'clDeviceGlobalMemSize
-            ,'clDeviceMaxConstantBufferSize
-            ,'clDeviceMaxConstantArgs
-            -- ,'clDeviceLocalMemType
-            ,'clDeviceLocalMemSize
-            ,'clDeviceErrorCorrectionSupport
-            ,'clDeviceProfilingTimerResolution
-            ,'clDeviceEndianLittle
-            ,'clDeviceAvailable
-            ,'clDeviceCompilerAvailable
-            -- ,'clDeviceExecutionCapabilities
-            ,'clDeviceQueueProperties
-            ,'clDeviceName
-            ,'clDeviceVendor
+            'deviceType
+            , 'deviceVendorId
+            ,'deviceMaxComputeUnits
+            ,'deviceMaxWorkItemDimensions
+            ,'deviceMaxWorkGroupSize
+            ,'deviceMaxWorkItemSizes
+            ,'devicePreferredVectorWidthChar
+            ,'devicePreferredVectorWidthShort
+            ,'devicePreferredVectorWidthInt
+            ,'devicePreferredVectorWidthLong
+            ,'devicePreferredVectorWidthFloat
+            ,'devicePreferredVectorWidthDouble
+            ,'deviceMaxClockFrequency
+            ,'deviceAddressBits
+            ,'deviceMaxReadImageArgs
+            ,'deviceMaxWriteImageArgs
+            ,'deviceMaxMemAllocSize
+            ,'deviceImage2dMaxWidth
+            ,'deviceImage2dMaxHeight
+            ,'deviceImage3dMaxWidth
+            ,'deviceImage3dMaxHeight
+            ,'deviceImage3dMaxDepth
+            ,'deviceImageSupport
+            ,'deviceMaxParameterSize
+            ,'deviceMaxSamplers
+            ,'deviceMemBaseAddrAlign
+            ,'deviceMinDataTypeAlignSize
+            ,'deviceSingleFpConfig
+            -- ,'deviceGlobalMemCacheType
+            ,'deviceGlobalMemCachelineSize
+            ,'deviceGlobalMemCacheSize
+            ,'deviceGlobalMemSize
+            ,'deviceMaxConstantBufferSize
+            ,'deviceMaxConstantArgs
+            -- ,'deviceLocalMemType
+            ,'deviceLocalMemSize
+            ,'deviceErrorCorrectionSupport
+            ,'deviceProfilingTimerResolution
+            ,'deviceEndianLittle
+            ,'deviceAvailable
+            ,'deviceCompilerAvailable
+            -- ,'deviceExecutionCapabilities
+            ,'deviceQueueProperties
+            ,'deviceName
+            ,'deviceVendor
             ,'clDriverVersion
-            ,'clDeviceProfile
-            ,'clDeviceVersion
-            ,'clDeviceExtensions
-            -- ,'clDevicePlatform
+            ,'deviceProfile
+            ,'deviceVersion
+            ,'deviceExtensions
+            -- ,'devicePlatform
             ]
 
 genPropList :: ExpQ

@@ -6,21 +6,21 @@ import OpenCL
 
 main = do
     cxt <- createContextFromType DeviceTypeAll
-    let devs = clContextDevices cxt
+    let devs = contextDevices cxt
     print devs
-    print (map clDeviceType devs)
-    queue <- createCommandQueue cxt (head devs) [CLQueueProfilingEnable]
+    print (map deviceType devs)
+    queue <- createCommandQueue cxt (head devs) [QueueProfilingEnable]
     testQueueInfos queue
     testBufferInfos cxt
 
 testQueueInfos q = do
     putStrLn "--- CLCommandQueue ---"
-    print (clQueueDevice q)
-    print (clContextDevices (clQueueContext q))
+    print (queueDevice q)
+    print (contextDevices (queueContext q))
     getQueueProperties q >>= print
-    setQueueProperties q [CLQueueOutOfOrderExecModeEnable] False
+    setQueueProperties q [QueueOutOfOrderExecModeEnable] False
     getQueueProperties q >>= print
-    setQueueProperties q [CLQueueProfilingEnable] False
+    setQueueProperties q [QueueProfilingEnable] False
     getQueueProperties q >>= print
 
 testBufferInfos cxt = do
