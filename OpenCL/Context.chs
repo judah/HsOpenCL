@@ -18,28 +18,28 @@ import Control.Applicative
 {#fun clCreateContext as clCreateContext
   { id `Ptr CLong'
   , `Int'
-  , castPtr `Ptr (Ptr CLDeviceID_)' -- TODO: allow more than one, I guess...
+  , castPtr `Ptr (Ptr DeviceID_)' -- TODO: allow more than one, I guess...
   , castFunPtr `FunPtr ()'
   , id `Ptr ()'
   , alloca- `CInt' checkSuccessPtr*-
   } -> `CLContext' newCLContext*
 #}
 
-createContext :: [CLDeviceID] -> IO CLContext
+createContext :: [DeviceID] -> IO CLContext
 createContext devices = withArrayLen (map _clDeviceIDPtr devices) $ \n ps ->
             clCreateContext nullPtr n ps nullFunPtr nullPtr
 
 -- TODO: the DeviceType is actually a bitfield
 {#fun clCreateContextFromType as clCreateContextFromType
   { id `Ptr CLong'
-  , deviceTypeEnum `CLDeviceType'
+  , deviceTypeEnum `DeviceType'
   , castFunPtr `FunPtr ()'
   , id `Ptr ()'
   , alloca- `CInt' checkSuccessPtr*-
   } -> `CLContext' newCLContext*
 #}
 
-createContextFromType :: CLDeviceType -> IO CLContext
+createContextFromType :: DeviceType -> IO CLContext
 createContextFromType dtype = clCreateContextFromType nullPtr
                                 dtype nullFunPtr nullPtr
 
@@ -62,6 +62,6 @@ enum CLContextInfo {
 #endc
 {#enum CLContextInfo {} #}
 
-clContextDevices :: CLContext -> [CLDeviceID]
-clContextDevices context = map CLDeviceID
+clContextDevices :: CLContext -> [DeviceID]
+clContextDevices context = map DeviceID
         $ getPureProp (clGetContextInfo context CLContextDevices)

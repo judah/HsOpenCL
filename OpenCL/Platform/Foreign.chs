@@ -18,16 +18,16 @@ enum CLDeviceType {
     DeviceTypeAll = CL_DEVICE_TYPE_ALL
 };
 #endc
-{#enum CLDeviceType {} deriving (Eq,Show)#}
+{#enum CLDeviceType as DeviceType {} deriving (Eq,Show)#}
 
 -- since CL_DEVICE_TYPE_ALL causes an overflow:
-deviceTypeEnum :: CLDeviceType -> CULLong 
+deviceTypeEnum :: DeviceType -> CULLong 
 deviceTypeEnum DeviceTypeAll = 0xFFFFFFFF
 deviceTypeEnum t = cEnum t
 
 {#fun unsafe clGetDeviceIDs as clGetDeviceIDs
   { id `Ptr ()' -- to be ignored
-  , deviceTypeEnum `CLDeviceType'
+  , deviceTypeEnum `DeviceType'
   , `Int'
   ,  castPtr `Ptr (Ptr _CLDeviceID)'
   , alloca- `Int' peekIntConv*
@@ -35,7 +35,7 @@ deviceTypeEnum t = cEnum t
 #}
 
 {#fun unsafe clGetDeviceInfo
- { clDeviceIDPtr `CLDeviceID'
+ { clDeviceIDPtr `DeviceID'
  , `Int'
  , `Int'
  , castPtr `Ptr a'
@@ -45,11 +45,11 @@ deviceTypeEnum t = cEnum t
 
 #c
 enum CLDeviceFPConfig{
-    CLFPDenorm = CL_FP_DENORM,
-    CLFPInfNan = CL_FP_INF_NAN,
-    CLFPRoundToNearest = CL_FP_ROUND_TO_NEAREST,
-    CLFPRoundToZero = CL_FP_ROUND_TO_ZERO
+    FPDenorm = CL_FP_DENORM,
+    FPInfNan = CL_FP_INF_NAN,
+    FPRoundToNearest = CL_FP_ROUND_TO_NEAREST,
+    FPRoundToZero = CL_FP_ROUND_TO_ZERO
 };
 #endc
-{#enum CLDeviceFPConfig {} deriving (Eq,Show)#}
+{#enum CLDeviceFPConfig as DeviceFPConfig {} deriving (Eq,Show)#}
 

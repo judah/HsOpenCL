@@ -82,7 +82,7 @@ enum CLBuildStatus {
 
 {#fun clGetProgramBuildInfo as clGetProgramBuildInfo
   { withCLProgram* `CLProgram'
-  , clDeviceIDPtr `CLDeviceID'
+  , clDeviceIDPtr `DeviceID'
   , cEnum `CLProgramBuildInfo'
   , `Int'
   , id `Ptr ()'
@@ -90,7 +90,7 @@ enum CLBuildStatus {
   } -> `Int' checkSuccess*-
 #}
 
-getBuildLog :: CLProgram -> CLDeviceID -> IO String
+getBuildLog :: CLProgram -> DeviceID -> IO String
 getBuildLog prog device = allocaBytes {#sizeof size_t#} $ \retValueSize -> do
     size <- clGetProgramBuildInfo prog device ProgramBuildLog 0 nullPtr 
     allocaBytes size $ \p -> do

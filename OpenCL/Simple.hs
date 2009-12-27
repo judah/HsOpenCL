@@ -1,6 +1,6 @@
 module OpenCL.Simple(
             SimpleProgram(..),
-            CLDeviceType(..),
+            DeviceType(..),
             newSimpleProgram,
             CLKernel,
             getKernel,
@@ -22,14 +22,14 @@ import Data.ByteString (ByteString)
 -- TODO: this isn't really necessary, since
 -- all of the types can ask for their context/id/etc.
 data SimpleProgram = SimpleProgram {
-                        simpleID :: CLDeviceID
+                        simpleID :: DeviceID
                         , simpleCxt :: CLContext
                         , simpleQueue :: CLCommandQueue
                         , simpleProgram :: CLProgram
                         }
 
 -- TODO: should be bytestring.
-newSimpleProgram :: CLDeviceType -> [ByteString] -> IO SimpleProgram
+newSimpleProgram :: DeviceType -> [ByteString] -> IO SimpleProgram
 newSimpleProgram devType sources = do
     devID <- getDeviceID devType
     cxt <- createContext [devID]
@@ -37,7 +37,7 @@ newSimpleProgram devType sources = do
     prog <- buildSimpleProgram devID cxt sources
     return $ SimpleProgram devID cxt queue prog
 
-buildSimpleProgram :: CLDeviceID -> CLContext -> [ByteString] -> IO CLProgram
+buildSimpleProgram :: DeviceID -> CLContext -> [ByteString] -> IO CLProgram
 buildSimpleProgram did cxt sources = do
     prog <- createProgramWithSource cxt sources
     handle (\(e::CLError) -> do

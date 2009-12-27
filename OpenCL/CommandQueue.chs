@@ -30,7 +30,7 @@ enum CLCommandQueueProperty {
 
 {#fun clCreateCommandQueue as createCommandQueue
   { withCLContext* `CLContext'
-  , clDeviceIDPtr `CLDeviceID'
+  , clDeviceIDPtr `DeviceID'
   , combineBitMasks `[CLCommandQueueProperty]'
   , alloca- `Ptr CInt' checkSuccessPtr*-
   } -> `CLCommandQueue' newCLCommandQueue*
@@ -79,8 +79,8 @@ clQueueContext q@(CLCommandQueue fp)
             getProp (getInfo q CLQueueContext)
                 >>= retainedCLContext
 
-clQueueDevice :: CLCommandQueue -> CLDeviceID
-clQueueDevice q = CLDeviceID $ getPureProp $ getInfo q CLQueueDevice
+clQueueDevice :: CLCommandQueue -> DeviceID
+clQueueDevice q = DeviceID $ getPureProp $ getInfo q CLQueueDevice
 
 getQueueProperties :: CLCommandQueue -> IO [CLCommandQueueProperty]
 getQueueProperties queue = getFlags (getInfo queue CLQueueProperties)
