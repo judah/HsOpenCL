@@ -17,7 +17,7 @@ import qualified Data.ByteString as B
 import Data.ByteString.Unsafe (unsafeUseAsCStringLen)
 
 {#fun clCreateProgramWithSource as clCreateProgramWithSource
-  { withCLContext* `CLContext'
+  { withContext* `Context'
   , `Int'
   , id `Ptr CString'
   , id `Ptr CULong'
@@ -32,7 +32,7 @@ foreign import ccall "&" clReleaseProgram :: Releaser CLProgram_
 
 -- TODO: make sure this is safe
 -- - exceptions
-createProgramWithSource :: CLContext -> [B.ByteString] -> IO CLProgram
+createProgramWithSource :: Context -> [B.ByteString] -> IO CLProgram
 createProgramWithSource context bs = withByteStrings bs $ \cs -> do
     let (cstrs, strLens) = unzip cs
     withArrayLen cstrs $ \count cstrsArr -> do

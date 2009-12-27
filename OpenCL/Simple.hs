@@ -23,7 +23,7 @@ import Data.ByteString (ByteString)
 -- all of the types can ask for their context/id/etc.
 data SimpleProgram = SimpleProgram {
                         simpleID :: DeviceID
-                        , simpleCxt :: CLContext
+                        , simpleCxt :: Context
                         , simpleQueue :: CLCommandQueue
                         , simpleProgram :: CLProgram
                         }
@@ -37,7 +37,7 @@ newSimpleProgram devType sources = do
     prog <- buildSimpleProgram devID cxt sources
     return $ SimpleProgram devID cxt queue prog
 
-buildSimpleProgram :: DeviceID -> CLContext -> [ByteString] -> IO CLProgram
+buildSimpleProgram :: DeviceID -> Context -> [ByteString] -> IO CLProgram
 buildSimpleProgram did cxt sources = do
     prog <- createProgramWithSource cxt sources
     handle (\(e::CLError) -> do

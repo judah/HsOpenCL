@@ -29,7 +29,7 @@ enum CLCommandQueueProperty {
 {#enum CLCommandQueueProperty {} deriving (Show,Eq)#}
 
 {#fun clCreateCommandQueue as createCommandQueue
-  { withCLContext* `CLContext'
+  { withContext* `Context'
   , deviceIDPtr `DeviceID'
   , combineBitMasks `[CLCommandQueueProperty]'
   , alloca- `Ptr CInt' checkSuccessPtr*-
@@ -71,9 +71,9 @@ enum CLCommandQueueInfo {
 
 -- careful of a race:
 -- If the ForeignPtr is GC'd in the middle of this computation
--- and releases the CommandQueue, OpenCL could release the CLContext also.
+-- and releases the CommandQueue, OpenCL could release the Context also.
 -- So make sure the CommandQueue stays alive throughout.
-clQueueContext :: CLCommandQueue -> CLContext
+clQueueContext :: CLCommandQueue -> Context
 clQueueContext q@(CLCommandQueue fp)
     = unsafePerformIO $ withForeignPtr fp $ \_ ->
             getProp (getInfo q CLQueueContext)

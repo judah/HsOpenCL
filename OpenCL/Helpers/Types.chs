@@ -33,13 +33,13 @@ deviceIDPtr :: DeviceID -> Ptr ()
 deviceIDPtr (DeviceID p) = castPtr p
 
 ------------
-data CLContext_
-newtype CLContext = CLContext (ForeignPtr CLContext_)
-withCLContext :: CLContext -> (Ptr () -> IO a) -> IO a
-withCLContext (CLContext p) f = withForeignPtr p $ f . castPtr
+data Context_
+newtype Context = Context (ForeignPtr Context_)
+withContext :: Context -> (Ptr () -> IO a) -> IO a
+withContext (Context p) f = withForeignPtr p $ f . castPtr
 
-newCLContext = newData CLContext clReleaseContext
-foreign import ccall "&" clReleaseContext :: Releaser CLContext_
+newContext = newData Context clReleaseContext
+foreign import ccall "&" clReleaseContext :: Releaser Context_
 
 {#fun clRetainContext
   { id `Ptr ()'
@@ -47,18 +47,18 @@ foreign import ccall "&" clReleaseContext :: Releaser CLContext_
 #}
 
 -- Note: be careful of races if the child is a ForeignPtr.  (See clQueueContext).
-retainedCLContext :: Ptr () -> IO CLContext
-retainedCLContext p = clRetainContext p >> newCLContext p
+retainedCLContext :: Ptr () -> IO Context
+retainedCLContext p = clRetainContext p >> newContext p
 
 -- Being careful of race conditions:
 -- The foreignptr points back to the context, and if it's GC'd
 -- it could cause the context to be released prematurely.
 -- So, make sure the ForeignPtr stays alive long enough for us to retain
 -- the context.
-retainedContextInfo :: ForeignPtr a -> Ptr () -> IO CLContext
+retainedContextInfo :: ForeignPtr a -> Ptr () -> IO Context
 retainedContextInfo child p = withForeignPtr child $ \_ -> do
     clRetainContext p
-    newCLContext p
+    newContext p
 ------------
 
 data CLCommandQueue_

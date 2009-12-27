@@ -1,9 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module OpenCL.Context(
-                    CLContext,
+                    Context,
                     createContext,
                     createContextFromType,
-                    clContextDevices,
+                    contextDevices,
                         ) where
 
 import OpenCL.Error
@@ -22,10 +22,10 @@ import Control.Applicative
   , castFunPtr `FunPtr ()'
   , id `Ptr ()'
   , alloca- `CInt' checkSuccessPtr*-
-  } -> `CLContext' newCLContext*
+  } -> `Context' newContext*
 #}
 
-createContext :: [DeviceID] -> IO CLContext
+createContext :: [DeviceID] -> IO Context
 createContext devices = withArrayLen (map _deviceIDPtr devices) $ \n ps ->
             clCreateContext nullPtr n ps nullFunPtr nullPtr
 
@@ -36,15 +36,15 @@ createContext devices = withArrayLen (map _deviceIDPtr devices) $ \n ps ->
   , castFunPtr `FunPtr ()'
   , id `Ptr ()'
   , alloca- `CInt' checkSuccessPtr*-
-  } -> `CLContext' newCLContext*
+  } -> `Context' newContext*
 #}
 
-createContextFromType :: DeviceType -> IO CLContext
+createContextFromType :: DeviceType -> IO Context
 createContextFromType dtype = clCreateContextFromType nullPtr
                                 dtype nullFunPtr nullPtr
 
 {#fun clGetContextInfo as clGetContextInfo
-  { withCLContext* `CLContext'
+  { withContext* `Context'
   , cEnum `CLContextInfo' -- todo do enum
   , `Int'
   , id `Ptr ()'
@@ -62,6 +62,6 @@ enum CLContextInfo {
 #endc
 {#enum CLContextInfo {} #}
 
-clContextDevices :: CLContext -> [DeviceID]
-clContextDevices context = map DeviceID
+contextDevices :: Context -> [DeviceID]
+contextDevices context = map DeviceID
         $ getPureProp (clGetContextInfo context CLContextDevices)

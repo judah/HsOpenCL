@@ -50,7 +50,7 @@ enum CLMemFlags {
 
 -- TODO: should I be using Long or size_T explicitly to prevent overflow?
 {#fun clCreateBuffer
-  { withCLContext* `CLContext'
+  { withContext* `Context'
   , combineBitMasks `[CLMemFlags]'
   , `Int'
   , castPtr `Ptr a'
@@ -71,7 +71,7 @@ data CLMemInit a = NoHostPtr | UseHostPtr (Ptr a)
                     deriving (Show,Eq)
 
 createBuffer :: forall a . Storable a
-        => CLContext -> CLMemAccess -> CLMemInit a -> Int -> IO (CLMem a)
+        => Context -> CLMemAccess -> CLMemInit a -> Int -> IO (CLMem a)
 createBuffer context memAccess hostPtr size
     = clCreateBuffer context flags (size * eltSize) p'
   where 
@@ -242,11 +242,11 @@ clMemSize m = getPureProp (getMemInfo m CLMemSize)
 -- worry about races like we do in clQueue.
 -- Well, there's still a tiny race if another thread releases the Mem and 
 -- context in the middle of our computation; but it's reasonable
--- to expect that the CLMem (and thus, OpenCL ensures, the CLContext) isn't
+-- to expect that the CLMem (and thus, OpenCL ensures, the Context) isn't
 -- freed by other threads during this computation.
-clMemContext :: CLMem a -> CLContext
+clMemContext :: CLMem a -> Context
 clMemContext m = unsafePerformIO $
-                    getProp (getMemInfo m CLMemContext) >>= newCLContext
+                    getProp (getMemInfo m CLMemContext) >>= newContext
 
 clGetMemReferenceCount :: CLMem a -> IO Int
 clGetMemReferenceCount m
