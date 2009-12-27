@@ -17,11 +17,11 @@ testQueueInfos q = do
     putStrLn "--- CLCommandQueue ---"
     print (clQueueDevice q)
     print (clContextDevices (clQueueContext q))
-    clQueueProperties q >>= print
-    setCommandQueueProperty q [CLQueueOutOfOrderExecModeEnable] False
-    clQueueProperties q >>= print
-    setCommandQueueProperty q [CLQueueProfilingEnable] False
-    clQueueProperties q >>= print
+    getQueueProperties q >>= print
+    setQueueProperties q [CLQueueOutOfOrderExecModeEnable] False
+    getQueueProperties q >>= print
+    setQueueProperties q [CLQueueProfilingEnable] False
+    getQueueProperties q >>= print
 
 testBufferInfos cxt = do
     putStrLn "--- CLMem ---"

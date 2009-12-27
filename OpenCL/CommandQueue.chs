@@ -8,8 +8,8 @@ module OpenCL.CommandQueue(
                 -- * Querying info and properties
                 clQueueDevice,
                 clQueueContext,
-                clQueueProperties,
-                setCommandQueueProperty,
+                getQueueProperties,
+                setQueueProperties,
                 ) where
 
 #include <OpenCL/OpenCL.h>
@@ -82,8 +82,8 @@ clQueueContext q@(CLCommandQueue fp)
 clQueueDevice :: CLCommandQueue -> CLDeviceID
 clQueueDevice q = CLDeviceID $ getPureProp $ getInfo q CLQueueDevice
 
-clQueueProperties :: CLCommandQueue -> IO [CLCommandQueueProperty]
-clQueueProperties queue = getFlags (getInfo queue CLQueueProperties)
+getQueueProperties :: CLCommandQueue -> IO [CLCommandQueueProperty]
+getQueueProperties queue = getFlags (getInfo queue CLQueueProperties)
                             [ CLQueueOutOfOrderExecModeEnable
                             , CLQueueProfilingEnable
                             ]
@@ -97,8 +97,8 @@ clQueueProperties queue = getFlags (getInfo queue CLQueueProperties)
   } -> `CLInt' checkSuccess-
 #}
 
-setCommandQueueProperty :: CLCommandQueue -> [CLCommandQueueProperty]
+setQueueProperties :: CLCommandQueue -> [CLCommandQueueProperty]
                                 -> Bool -> IO ()
-setCommandQueueProperty queue props bool
+setQueueProperties queue props bool
     = clSetCommandQueueProperty queue props bool nullPtr
 
