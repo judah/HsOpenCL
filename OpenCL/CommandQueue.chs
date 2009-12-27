@@ -3,8 +3,8 @@ module OpenCL.CommandQueue(
                 CommandQueue,
                 CommandQueueProperty(..),
                 createCommandQueue,
-                clFlush,
-                clFinish,
+                flush,
+                finish,
                 -- * Querying info and properties
                 queueDevice,
                 queueContext,
@@ -39,12 +39,12 @@ enum CommandQueueProperty {
 newCommandQueue = newData CommandQueue clReleaseCommandQueue
 foreign import ccall "&" clReleaseCommandQueue :: Releaser CommandQueue_
 
-{#fun clFlush as clFlush
+{#fun clFlush as flush
   { withCommandQueue* `CommandQueue'
   } -> `Int' checkSuccess-
 #}
 
-{#fun clFinish as clFinish
+{#fun clFinish as finish
   { withCommandQueue* `CommandQueue'
   } -> `Int' checkSuccess-
 #}

@@ -107,12 +107,12 @@ runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     let queue = simpleQueue cxt
     size <- getCommonSize args
     mems <- mapM (bufferArg cxt size) argPtrs
-    clFinish queue
+    finish queue
     zipWithM_ (setKernelMemArg kernel) [0..] mems
     enqueueNDRangeKernel queue kernel [size]
-    clFinish queue
+    finish queue
     zipWithM_ (copyMutableArg queue size) mems argPtrs
-    clFinish queue
+    finish queue
     mapM_ clReleaseMemObject mems
 
 getCommonSize :: [KernelArg] -> IO Int
