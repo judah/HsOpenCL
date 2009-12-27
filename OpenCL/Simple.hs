@@ -2,7 +2,7 @@ module OpenCL.Simple(
             SimpleProgram(..),
             DeviceType(..),
             newSimpleProgram,
-            CLKernel,
+            Kernel,
             getKernel,
             KernelArg(..),
             runKernel
@@ -74,8 +74,8 @@ class KernelFuncType f where
     
 
 -}
-getKernel :: SimpleProgram -> String -> IO CLKernel
-getKernel = clCreateKernel . simpleProgram
+getKernel :: SimpleProgram -> String -> IO Kernel
+getKernel = createKernel . simpleProgram
 
 -- Add note that Doubles probably won't work...
 data KernelArg where
@@ -102,7 +102,7 @@ data KernelArg where
 -- instance KernelFunc f, Storable a => KernelFunc (IOCArray Int a -> f) 
 --
 -- And then of course deal with 2d and 3d data...
-runKernel :: SimpleProgram -> CLKernel -> [KernelArg] -> IO ()
+runKernel :: SimpleProgram -> Kernel -> [KernelArg] -> IO ()
 runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     let queue = simpleQueue cxt
     size <- getCommonSize args

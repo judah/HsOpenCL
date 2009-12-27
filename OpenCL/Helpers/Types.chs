@@ -88,10 +88,10 @@ newtype CLMem a = CLMem (Ptr CLMem_)
 withCLMem :: CLMem a -> (Ptr () -> IO b) -> IO b
 withCLMem (CLMem p) f = f $ castPtr p
 
-data CLKernel_
-newtype CLKernel = CLKernel (ForeignPtr CLKernel_)
-withCLKernel :: CLKernel -> (Ptr () -> IO a) -> IO a
-withCLKernel (CLKernel p) f = withForeignPtr p $ f . castPtr
+data Kernel_
+newtype Kernel = Kernel (ForeignPtr Kernel_)
+withKernel :: Kernel -> (Ptr () -> IO a) -> IO a
+withKernel (Kernel p) f = withForeignPtr p $ f . castPtr
 
 ---------
 -- Most of the types have a clGet*Info function following the same

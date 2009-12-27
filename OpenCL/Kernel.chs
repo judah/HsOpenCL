@@ -1,6 +1,6 @@
 module OpenCL.Kernel(
-                CLKernel,
-                clCreateKernel,
+                Kernel,
+                createKernel,
                 setKernelMemArg,
                 enqueueNDRangeKernel,
                 ) where
@@ -11,31 +11,31 @@ import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
 
-{#fun clCreateKernel as clCreateKernel
+{#fun clCreateKernel as createKernel
   { withProgram* `Program'
   , `String'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLKernel' newCLKernel*
+  } -> `Kernel' newKernel*
 #}
 
-newCLKernel = newData CLKernel clReleaseKernel
-foreign import ccall "&" clReleaseKernel :: Releaser CLKernel_
+newKernel = newData Kernel clReleaseKernel
+foreign import ccall "&" clReleaseKernel :: Releaser Kernel_
 
 {#fun clSetKernelArg as clSetKernelArg
-  { withCLKernel* `CLKernel'
+  { withKernel* `Kernel'
   , `Int'
   , `Int'
   , castPtr `Ptr a'
   } -> `Int' checkSuccess-
 #}
 
-setKernelMemArg :: CLKernel -> Int -> CLMem a -> IO ()
+setKernelMemArg :: Kernel -> Int -> CLMem a -> IO ()
 setKernelMemArg kernel arg mem = withCLMem mem $ \p -> with p $
         clSetKernelArg kernel arg {#sizeof cl_mem#}
 
 {#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel
   { withCommandQueue* `CommandQueue'
-  , withCLKernel* `CLKernel'
+  , withKernel* `Kernel'
   , `Int'
   , id `Ptr CULong' -- currently, must be null.
   , id `Ptr CULong' -- global work size
@@ -46,7 +46,7 @@ setKernelMemArg kernel arg mem = withCLMem mem $ \p -> with p $
   } -> `Int' checkSuccess-
 #}
 
-enqueueNDRangeKernel :: CommandQueue -> CLKernel -> [Int] -> IO ()
+enqueueNDRangeKernel :: CommandQueue -> Kernel -> [Int] -> IO ()
 enqueueNDRangeKernel queue kernel globalWorkSize
     = withArrayLen (map toEnum globalWorkSize) $ \dim workSizes ->
         clEnqueueNDRangeKernel queue kernel dim nullPtr workSizes nullPtr 0 nullPtr
