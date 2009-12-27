@@ -50,7 +50,7 @@ withByteStrings (b:bs) f = withByteStrings bs $ \cs ->
 {#fun clBuildProgram as clBuildProgram
   { withCLProgram* `CLProgram'
   , cEnum `Int'
-  , castPtr `Ptr (Ptr _CLDeviceID)'
+  , castPtr `Ptr (Ptr _DeviceID)'
   , `String'
   , castFunPtr `FunPtr ()' -- notification
   , id `Ptr ()'
@@ -82,7 +82,7 @@ enum CLBuildStatus {
 
 {#fun clGetProgramBuildInfo as clGetProgramBuildInfo
   { withCLProgram* `CLProgram'
-  , clDeviceIDPtr `DeviceID'
+  , deviceIDPtr `DeviceID'
   , cEnum `CLProgramBuildInfo'
   , `Int'
   , id `Ptr ()'

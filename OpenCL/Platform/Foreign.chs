@@ -35,7 +35,7 @@ deviceTypeEnum t = cEnum t
 #}
 
 {#fun unsafe clGetDeviceInfo
- { clDeviceIDPtr `DeviceID'
+ { deviceIDPtr `DeviceID'
  , `Int'
  , `Int'
  , castPtr `Ptr a'

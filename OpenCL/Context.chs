@@ -26,7 +26,7 @@ import Control.Applicative
 #}
 
 createContext :: [DeviceID] -> IO CLContext
-createContext devices = withArrayLen (map _clDeviceIDPtr devices) $ \n ps ->
+createContext devices = withArrayLen (map _deviceIDPtr devices) $ \n ps ->
             clCreateContext nullPtr n ps nullFunPtr nullPtr
 
 -- TODO: the DeviceType is actually a bitfield
