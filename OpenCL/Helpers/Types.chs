@@ -66,10 +66,10 @@ newtype CommandQueue = CommandQueue (ForeignPtr CommandQueue_)
 withCommandQueue :: CommandQueue -> (Ptr () -> IO a) -> IO a
 withCommandQueue (CommandQueue p) f = withForeignPtr p $ f . castPtr
 
-data CLProgram_
-newtype CLProgram = CLProgram (ForeignPtr CLProgram_)
-withCLProgram :: CLProgram -> (Ptr () -> IO a) -> IO a
-withCLProgram (CLProgram p) f = withForeignPtr p $ f . castPtr
+data Program_
+newtype Program = Program (ForeignPtr Program_)
+withProgram :: Program -> (Ptr () -> IO a) -> IO a
+withProgram (Program p) f = withForeignPtr p $ f . castPtr
 
 -- Note: cl_mem's aren't retained when they're set as kernel arguments.
 -- Rather, they're only retained while the kernel is running, and released

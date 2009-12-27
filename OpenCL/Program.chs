@@ -1,9 +1,7 @@
-module OpenCL.Program(CLProgram,
+module OpenCL.Program(Program,
                     createProgramWithSource,
                     buildProgram,
-                    CLProgramBuildInfo(..),
-                    CLBuildStatus,
-                    clGetProgramBuildInfo,
+                    BuildStatus(..),
                     getBuildLog,
                 ) where
 
@@ -22,17 +20,17 @@ import Data.ByteString.Unsafe (unsafeUseAsCStringLen)
   , id `Ptr CString'
   , id `Ptr CULong'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLProgram' newCLProgram*
+  } -> `Program' newCLProgram*
 #}
 
-newCLProgram = newData CLProgram clReleaseProgram
+newCLProgram = newData Program clReleaseProgram
 
 -- TODO: ignoring the return value...
-foreign import ccall "&" clReleaseProgram :: Releaser CLProgram_
+foreign import ccall "&" clReleaseProgram :: Releaser Program_
 
 -- TODO: make sure this is safe
 -- - exceptions
-createProgramWithSource :: Context -> [B.ByteString] -> IO CLProgram
+createProgramWithSource :: Context -> [B.ByteString] -> IO Program
 createProgramWithSource context bs = withByteStrings bs $ \cs -> do
     let (cstrs, strLens) = unzip cs
     withArrayLen cstrs $ \count cstrsArr -> do
@@ -48,7 +46,7 @@ withByteStrings (b:bs) f = withByteStrings bs $ \cs ->
 
 
 {#fun clBuildProgram as clBuildProgram
-  { withCLProgram* `CLProgram'
+  { withProgram* `Program'
   , cEnum `Int'
   , castPtr `Ptr (Ptr _DeviceID)'
   , `String'
@@ -57,31 +55,31 @@ withByteStrings (b:bs) f = withByteStrings bs $ \cs ->
   } -> `Int' checkSuccess*-
 #}
 
-buildProgram :: CLProgram -> IO ()
+buildProgram :: Program -> IO ()
 buildProgram prog = clBuildProgram prog 0 nullPtr "" nullFunPtr nullPtr
 
 #c
 enum CLProgramBuildInfo {
-    ProgramBuildStatus = CL_PROGRAM_BUILD_STATUS,
-    ProgramBuildOptions = CL_PROGRAM_BUILD_OPTIONS,
-    ProgramBuildLog = CL_PROGRAM_BUILD_LOG
+    CLProgramBuildStatus = CL_PROGRAM_BUILD_STATUS,
+    CLProgramBuildOptions = CL_PROGRAM_BUILD_OPTIONS,
+    CLProgramBuildLog = CL_PROGRAM_BUILD_LOG
 };
 #endc
 {#enum CLProgramBuildInfo {}#}
 
 #c
-enum CLBuildStatus {
-    CLBuildNone = CL_BUILD_NONE,
-    CLBuildError = CL_BUILD_ERROR,
-    CLBuildSuccess = CL_BUILD_SUCCESS,
-    CLBuildInProgramss = CL_BUILD_IN_PROGRESS
+enum BuildStatus {
+    BuildNone = CL_BUILD_NONE,
+    BuildError = CL_BUILD_ERROR,
+    BuildSuccess = CL_BUILD_SUCCESS,
+    BuildInProgramss = CL_BUILD_IN_PROGRESS
 };
 #endc
-{#enum CLBuildStatus {} deriving (Show,Eq)#}
+{#enum BuildStatus {} deriving (Show,Eq)#}
     
 
 {#fun clGetProgramBuildInfo as clGetProgramBuildInfo
-  { withCLProgram* `CLProgram'
+  { withProgram* `Program'
   , deviceIDPtr `DeviceID'
   , cEnum `CLProgramBuildInfo'
   , `Int'
@@ -90,9 +88,7 @@ enum CLBuildStatus {
   } -> `Int' checkSuccess*-
 #}
 
-getBuildLog :: CLProgram -> DeviceID -> IO String
-getBuildLog prog device = allocaBytes {#sizeof size_t#} $ \retValueSize -> do
-    size <- clGetProgramBuildInfo prog device ProgramBuildLog 0 nullPtr 
-    allocaBytes size $ \p -> do
-    size' <- clGetProgramBuildInfo prog device ProgramBuildLog size p
-    peekCString (castPtr p)
+-- TODO: should be ByteString?
+getBuildLog :: Program -> DeviceID -> IO String
+getBuildLog prog device = getProp $
+        clGetProgramBuildInfo prog device CLProgramBuildLog

@@ -25,7 +25,7 @@ data SimpleProgram = SimpleProgram {
                         simpleID :: DeviceID
                         , simpleCxt :: Context
                         , simpleQueue :: CommandQueue
-                        , simpleProgram :: CLProgram
+                        , simpleProgram :: Program
                         }
 
 -- TODO: should be bytestring.
@@ -37,7 +37,7 @@ newSimpleProgram devType sources = do
     prog <- buildSimpleProgram devID cxt sources
     return $ SimpleProgram devID cxt queue prog
 
-buildSimpleProgram :: DeviceID -> Context -> [ByteString] -> IO CLProgram
+buildSimpleProgram :: DeviceID -> Context -> [ByteString] -> IO Program
 buildSimpleProgram did cxt sources = do
     prog <- createProgramWithSource cxt sources
     handle (\(e::CLError) -> do
