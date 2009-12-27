@@ -68,7 +68,7 @@ import OpenCL.Helpers.C2HS
 import OpenCL.Error
 import OpenCL.Helpers.Types
 import OpenCL.Platform.Foreign
-import OpenCL.CommandQueue (CLCommandQueueProperties(..))
+import OpenCL.CommandQueue (CLCommandQueueProperty(..))
 
 -- TODO: platforms
 
@@ -237,7 +237,7 @@ clDeviceExtensions = deviceInfo (#const CL_DEVICE_EXTENSIONS)
 
 --------
 
-clDeviceQueueProperties :: CLDeviceID -> [CLCommandQueueProperties]
+clDeviceQueueProperties :: CLDeviceID -> [CLCommandQueueProperty]
 clDeviceQueueProperties dev = unsafePerformIO
         $ getFlags (clGetDeviceInfo dev (#const CL_DEVICE_QUEUE_PROPERTIES))
                             [CLQueueOutOfOrderExecModeEnable
