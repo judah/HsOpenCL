@@ -5,6 +5,7 @@ import OpenCL
 
 import Foreign
 import Foreign.C
+import qualified Data.ByteString as B
 
 import System.Environment
 
@@ -13,7 +14,7 @@ import Control.Exception
 main = do
     [n] <- getArgs
     let file = "test_prog.cl"
-    contents <- readFile file
+    contents <- B.readFile file
     dev <- getDeviceID DeviceTypeGPU
     print ("device:",dev)
     context <- createContext [dev]

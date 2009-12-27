@@ -13,6 +13,8 @@ import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
 import Control.Applicative
+import qualified Data.ByteString as B
+import Data.ByteString.Unsafe (unsafeUseAsCStringLen)
 
 {#fun clCreateProgramWithSource as clCreateProgramWithSource
   { withCLContext* `CLContext'
@@ -29,18 +31,21 @@ newCLProgram = newData CLProgram clReleaseProgram
 foreign import ccall "&" clReleaseProgram :: Releaser CLProgram_
 
 -- TODO: make sure this is safe
--- TODO: Use ByteString
 -- - exceptions
--- - freeing immediately is OK?
-createProgramWithSource :: CLContext -> [String] -> IO CLProgram
-createProgramWithSource context cs = do
-    (cstrs, strLens) <- unzip <$> mapM newCStringLen cs
+createProgramWithSource :: CLContext -> [B.ByteString] -> IO CLProgram
+createProgramWithSource context bs = withByteStrings bs $ \cs -> do
+    let (cstrs, strLens) = unzip cs
     withArrayLen cstrs $ \count cstrsArr -> do
     withArray (map toEnum strLens) $ \lenArr -> do
     prog <- clCreateProgramWithSource context
                     count cstrsArr lenArr
-    mapM_ free cstrs
     return prog
+
+withByteStrings :: [B.ByteString] -> ([CStringLen] -> IO a) -> IO a
+withByteStrings [] f = f []
+withByteStrings (b:bs) f = withByteStrings bs $ \cs ->
+        unsafeUseAsCStringLen b $ \c -> f (c:cs)
+
 
 {#fun clBuildProgram as clBuildProgram
   { withCLProgram* `CLProgram'

@@ -6,9 +6,11 @@ import OpenCL.Simple
 import Data.Array.CArray
 import Data.Array.IOCArray
 
+import qualified Data.ByteString as B
+
 
 main = do
-    contents <- readFile "test_prog.cl"
+    contents <- B.readFile "test_prog.cl"
     prog <- newSimpleProgram DeviceTypeGPU [contents]
     putStrLn "Built!"
     kernel <- getKernel prog "add"
