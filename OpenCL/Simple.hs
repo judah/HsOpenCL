@@ -24,7 +24,7 @@ import Data.ByteString (ByteString)
 data SimpleProgram = SimpleProgram {
                         simpleID :: DeviceID
                         , simpleCxt :: Context
-                        , simpleQueue :: CLCommandQueue
+                        , simpleQueue :: CommandQueue
                         , simpleProgram :: CLProgram
                         }
 
@@ -162,7 +162,7 @@ bufferArg cxt size (WriteOnlyPtr (p::Ptr a)) = fmap castCLMem
         :: IO (CLMem a))
 
 
-copyMutableArg :: CLCommandQueue -> Int -> CLMem () -> KernelPtrArg -> IO ()
+copyMutableArg :: CommandQueue -> Int -> CLMem () -> KernelPtrArg -> IO ()
 copyMutableArg _ _ _ (ReadOnlyPtr _) = return ()
 copyMutableArg queue size mem (WriteOnlyPtr p) =
     enqueueReadBuffer queue (castCLMem mem) size p

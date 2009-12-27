@@ -90,7 +90,7 @@ createBuffer context memAccess hostPtr size
             CLMemReadOnly -> CLMemReadOnly_
 
 {#fun clEnqueueReadBuffer
-  { withCLCommandQueue* `CLCommandQueue'
+  { withCommandQueue* `CommandQueue'
   , withCLMem* `CLMem a'
   , cFromBool `Bool'
   , `Int'
@@ -103,13 +103,13 @@ createBuffer context memAccess hostPtr size
 #}
 
 enqueueReadBuffer :: Storable a 
-        => CLCommandQueue -> CLMem a
+        => CommandQueue -> CLMem a
                 -> Int -- ^ The number of elements to copy.
                 -> Ptr a -> IO ()
 enqueueReadBuffer queue mem = enqueueReadBufferOff queue mem 0
 
 enqueueReadBufferOff :: forall a . Storable a
-        => CLCommandQueue -> CLMem a -> Int -- ^ The offset index.
+        => CommandQueue -> CLMem a -> Int -- ^ The offset index.
                                 -> Int -- ^ The number of elements to copy.
                     -> Ptr a -> IO ()
 enqueueReadBufferOff queue mem offset size p
@@ -118,7 +118,7 @@ enqueueReadBufferOff queue mem offset size p
   where eltWidth = sizeOf (undefined :: a)
 
 {#fun clEnqueueWriteBuffer
-  { withCLCommandQueue* `CLCommandQueue'
+  { withCommandQueue* `CommandQueue'
   , withCLMem* `CLMem a'
   , cFromBool `Bool'
   , `Int'
@@ -131,13 +131,13 @@ enqueueReadBufferOff queue mem offset size p
 #}
 
 enqueueWriteBuffer :: Storable a 
-        => CLCommandQueue -> CLMem a
+        => CommandQueue -> CLMem a
                 -> Int  -- ^ The number of elements to copy.
                 -> Ptr a -> IO ()
 enqueueWriteBuffer queue mem = enqueueWriteBufferOff queue mem 0
 
 enqueueWriteBufferOff :: forall a . Storable a
-        => CLCommandQueue -> CLMem a -> Int -- ^ The offset index.
+        => CommandQueue -> CLMem a -> Int -- ^ The offset index.
                                 -> Int -- ^ The number of elements to copy.
                                 -> Ptr a -> IO ()
 enqueueWriteBufferOff queue mem offset size p
@@ -146,7 +146,7 @@ enqueueWriteBufferOff queue mem offset size p
   where eltWidth = sizeOf (undefined :: a)
 
 {#fun clEnqueueCopyBuffer
-  { withCLCommandQueue* `CLCommandQueue'
+  { withCommandQueue* `CommandQueue'
   , withCLMem* `CLMem a'
   , withCLMem* `CLMem a'
   , `Int'
@@ -159,7 +159,7 @@ enqueueWriteBufferOff queue mem offset size p
 #}
 
 enqueueCopyBuffer :: forall a . Storable a
-    => CLCommandQueue -> CLMem a -- ^ The source buffer.
+    => CommandQueue -> CLMem a -- ^ The source buffer.
             -> CLMem a -- ^ The destination buffer.
             -> Int -- ^ The number of elements to copy.
             -> IO ()
@@ -167,7 +167,7 @@ enqueueCopyBuffer queue source dest
     = enqueueCopyBufferOff queue source dest 0 0
 
 enqueueCopyBufferOff :: forall a . Storable a
-    => CLCommandQueue -> CLMem a -- ^ The source buffer
+    => CommandQueue -> CLMem a -- ^ The source buffer
             -> CLMem a -- ^ The destination buffer.
             -> Int -- ^ The offset index in the source buffer.
             -> Int -- ^ The offset index in the destination.

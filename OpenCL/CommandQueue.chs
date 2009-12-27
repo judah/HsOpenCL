@@ -1,13 +1,13 @@
 module OpenCL.CommandQueue(
                 -- * Command queues
-                CLCommandQueue,
-                CLCommandQueueProperty(..),
+                CommandQueue,
+                CommandQueueProperty(..),
                 createCommandQueue,
                 clFlush,
                 clFinish,
                 -- * Querying info and properties
-                clQueueDevice,
-                clQueueContext,
+                queueDevice,
+                queueContext,
                 getQueueProperties,
                 setQueueProperties,
                 ) where
@@ -21,31 +21,31 @@ import Control.Monad
 
 -- TODO: should this be called "Property" in singular?
 #c
-enum CLCommandQueueProperty {
-    CLQueueOutOfOrderExecModeEnable = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,
-    CLQueueProfilingEnable = CL_QUEUE_PROFILING_ENABLE
+enum CommandQueueProperty {
+    QueueOutOfOrderExecModeEnable = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,
+    QueueProfilingEnable = CL_QUEUE_PROFILING_ENABLE
 };
 #endc
-{#enum CLCommandQueueProperty {} deriving (Show,Eq)#}
+{#enum CommandQueueProperty {} deriving (Show,Eq)#}
 
 {#fun clCreateCommandQueue as createCommandQueue
   { withContext* `Context'
   , deviceIDPtr `DeviceID'
-  , combineBitMasks `[CLCommandQueueProperty]'
+  , combineBitMasks `[CommandQueueProperty]'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLCommandQueue' newCLCommandQueue*
+  } -> `CommandQueue' newCommandQueue*
 #}
 
-newCLCommandQueue = newData CLCommandQueue clReleaseCommandQueue
-foreign import ccall "&" clReleaseCommandQueue :: Releaser CLCommandQueue_
+newCommandQueue = newData CommandQueue clReleaseCommandQueue
+foreign import ccall "&" clReleaseCommandQueue :: Releaser CommandQueue_
 
 {#fun clFlush as clFlush
-  { withCLCommandQueue* `CLCommandQueue'
+  { withCommandQueue* `CommandQueue'
   } -> `Int' checkSuccess-
 #}
 
 {#fun clFinish as clFinish
-  { withCLCommandQueue* `CLCommandQueue'
+  { withCommandQueue* `CommandQueue'
   } -> `Int' checkSuccess-
 #}
 
@@ -61,7 +61,7 @@ enum CLCommandQueueInfo {
 #endc
 {#enum CLCommandQueueInfo {}#}
 {#fun clGetCommandQueueInfo as getInfo
-  { withCLCommandQueue* `CLCommandQueue'
+  { withCommandQueue* `CommandQueue'
   , cEnum `CLCommandQueueInfo'
   , `Int'
   , id `Ptr ()'
@@ -73,31 +73,31 @@ enum CLCommandQueueInfo {
 -- If the ForeignPtr is GC'd in the middle of this computation
 -- and releases the CommandQueue, OpenCL could release the Context also.
 -- So make sure the CommandQueue stays alive throughout.
-clQueueContext :: CLCommandQueue -> Context
-clQueueContext q@(CLCommandQueue fp)
+queueContext :: CommandQueue -> Context
+queueContext q@(CommandQueue fp)
     = unsafePerformIO $ withForeignPtr fp $ \_ ->
             getProp (getInfo q CLQueueContext)
                 >>= retainedCLContext
 
-clQueueDevice :: CLCommandQueue -> DeviceID
-clQueueDevice q = DeviceID $ getPureProp $ getInfo q CLQueueDevice
+queueDevice :: CommandQueue -> DeviceID
+queueDevice q = DeviceID $ getPureProp $ getInfo q CLQueueDevice
 
-getQueueProperties :: CLCommandQueue -> IO [CLCommandQueueProperty]
+getQueueProperties :: CommandQueue -> IO [CommandQueueProperty]
 getQueueProperties queue = getFlags (getInfo queue CLQueueProperties)
-                            [ CLQueueOutOfOrderExecModeEnable
-                            , CLQueueProfilingEnable
+                            [ QueueOutOfOrderExecModeEnable
+                            , QueueProfilingEnable
                             ]
 
 {#fun clSetCommandQueueProperty as clSetCommandQueueProperty
-  { withCLCommandQueue* `CLCommandQueue'
-  , combineBitMasks `[CLCommandQueueProperty]'
+  { withCommandQueue* `CommandQueue'
+  , combineBitMasks `[CommandQueueProperty]'
   , `Bool'
   , castPtr `Ptr ()' -- Ignoring the return value of old properties,
                 -- since it can be extracted by clGetCommandQueueInfo.
   } -> `CLInt' checkSuccess-
 #}
 
-setQueueProperties :: CLCommandQueue -> [CLCommandQueueProperty]
+setQueueProperties :: CommandQueue -> [CommandQueueProperty]
                                 -> Bool -> IO ()
 setQueueProperties queue props bool
     = clSetCommandQueueProperty queue props bool nullPtr

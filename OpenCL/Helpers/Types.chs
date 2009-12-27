@@ -61,10 +61,10 @@ retainedContextInfo child p = withForeignPtr child $ \_ -> do
     newContext p
 ------------
 
-data CLCommandQueue_
-newtype CLCommandQueue = CLCommandQueue (ForeignPtr CLCommandQueue_)
-withCLCommandQueue :: CLCommandQueue -> (Ptr () -> IO a) -> IO a
-withCLCommandQueue (CLCommandQueue p) f = withForeignPtr p $ f . castPtr
+data CommandQueue_
+newtype CommandQueue = CommandQueue (ForeignPtr CommandQueue_)
+withCommandQueue :: CommandQueue -> (Ptr () -> IO a) -> IO a
+withCommandQueue (CommandQueue p) f = withForeignPtr p $ f . castPtr
 
 data CLProgram_
 newtype CLProgram = CLProgram (ForeignPtr CLProgram_)

@@ -34,7 +34,7 @@ setKernelMemArg kernel arg mem = withCLMem mem $ \p -> with p $
         clSetKernelArg kernel arg {#sizeof cl_mem#}
 
 {#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel
-  { withCLCommandQueue* `CLCommandQueue'
+  { withCommandQueue* `CommandQueue'
   , withCLKernel* `CLKernel'
   , `Int'
   , id `Ptr CULong' -- currently, must be null.
@@ -46,7 +46,7 @@ setKernelMemArg kernel arg mem = withCLMem mem $ \p -> with p $
   } -> `Int' checkSuccess-
 #}
 
-enqueueNDRangeKernel :: CLCommandQueue -> CLKernel -> [Int] -> IO ()
+enqueueNDRangeKernel :: CommandQueue -> CLKernel -> [Int] -> IO ()
 enqueueNDRangeKernel queue kernel globalWorkSize
     = withArrayLen (map toEnum globalWorkSize) $ \dim workSizes ->
         clEnqueueNDRangeKernel queue kernel dim nullPtr workSizes nullPtr 0 nullPtr
