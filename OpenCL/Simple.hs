@@ -2,10 +2,8 @@ module OpenCL.Simple(
             SimpleProgram(..),
             DeviceType(..),
             newSimpleProgram,
-            Kernel,
-            getKernel,
-            KernelArg(..),
-            runKernel
+            KernelFunc(),
+            getKernelFunc,
             )
              where
 
@@ -49,60 +47,31 @@ buildSimpleProgram did cxt sources = do
         $ buildProgram prog ""
     return prog
 
-
-{-
-data KernelArgType = ReadOnly | ReadWrite | WriteOnly
-
-data SomeStorable a where
-    SomeStorable :: Storable e => a e -> SomeStorable a
-class KernelResult a where
-    resultArrays :: a -> [SomeStorable (CArray Int)]
-
-instance Storable a => KernelResult (CArray Int a) where
-    resultArrays 
-
-OK, question becomes whether we want to set the buf size each time...
-
-
-OK, API is:
-data KernelFunc f = KernelFunc {funcKernel :: Kernel,
-                                kernelArgs :: KernelArgs
-                                numKernelReturns :: Int
-                                }
-getKernel :: KernelFuncType f => Program -> String -> IO KernelFun f
-
-class KernelFuncType f where
-    
-
--}
-getKernel :: SimpleProgram -> String -> IO Kernel
-getKernel = createKernel . simpleProgram
-
 -- Add note that Doubles probably won't work...
 data KernelArg where
     ReadOnly :: Storable a => CArray Int a -> KernelArg
     ReadWrite :: Storable a => IOCArray Int a -> KernelArg
     WriteOnly :: Storable a => IOCArray Int a -> KernelArg
-    -- TODO: just a pure output...
 
--- TODO: should kernel contain ref to context?
+-- This code inspired by the Translatable class from the llvm package.
+class KernelFunc f where
+    applyKFunc :: ([KernelArg] -> IO ()) -> [KernelArg] -> f
 
--- TODO: Multi-dimensional
+-- TODO: probably more caching opportunities, but whatever for now.
+getKernelFunc :: KernelFunc f => SimpleProgram -> String -> IO f
+getKernelFunc prog text = do
+    kernel <- createKernel (simpleProgram prog) text
+    return $ applyKFunc (runKernel prog kernel) []
 
--- TODO: some sort of class structure so we can make pure functions...
--- TODO: Use that so we don't need to create new buffers each time...
--- And don't need to check sizes each time, either.
---
--- Really what we want is
--- class KernelFunc f where
---
--- instance Storable a => KernelFunc (CArray Int a)
--- instance Storable a => KernelFunc (CArray Int a, CArray Int a)
--- etc.
--- instance KernelFunc f, Storable a => KernelFunc (CArray Int a -> f)
--- instance KernelFunc f, Storable a => KernelFunc (IOCArray Int a -> f) 
---
--- And then of course deal with 2d and 3d data...
+instance KernelFunc (IO ()) where
+    applyKFunc run args = run $ reverse args
+
+instance (Storable a, KernelFunc f) => KernelFunc (CArray Int a -> f) where
+    applyKFunc run as = \a -> applyKFunc run (ReadOnly a:as)
+
+instance (Storable a, KernelFunc f) => KernelFunc (IOCArray Int a -> f) where
+    applyKFunc run as = \a -> applyKFunc run (WriteOnly a:as)
+
 runKernel :: SimpleProgram -> Kernel -> [KernelArg] -> IO ()
 runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     let queue = simpleQueue cxt
