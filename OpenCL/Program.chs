@@ -50,12 +50,9 @@ withByteStringPtrs bs f = promote unsafeUseAsCStringLen bs $ \cs -> do
 
 createN :: [Int] -> (Ptr CString -> IO ()) -> IO [ByteString]
 createN sizes f = do
-    -- It's a little bit of a hack to create ByteStrings and then modify
-    -- their internals, but it's safe since no other function has access
-    -- to the ByteStrings until we return them.
-    bs <- forM sizes $ \s -> (\fp -> fromForeignPtr fp 0 s) <$> mallocByteString s
-    withByteStringPtrs bs $ \cs _ -> f cs
-    return bs
+    fps <- mapM mallocByteString sizes
+    promote withForeignPtr fps $ \cstrs -> withArray cstrs (f . castPtr)
+    return $ zipWith (flip fromForeignPtr 0) fps sizes
 
 createProgramWithSource :: Context -> [ByteString] -> IO Program
 createProgramWithSource context bs = withByteStringPtrs bs $ \cs lenP -> 
