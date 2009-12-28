@@ -26,9 +26,9 @@ main = do
                 log <- getBuildLog prog dev
                 print log
                 throw e)
-            $ buildProgram prog
+            $ buildProgram prog ""
     print "Built!"
-    kernel <- clCreateKernel prog "add"
+    kernel <- createKernel prog "add"
     print "Kernel!"
     -- Allocate the buffers...
     let size = read n :: Int
@@ -42,7 +42,7 @@ main = do
     enqueueWriteBuffer queue bMem size b
     ansMem <- createBuffer context CLMemReadWrite NoHostPtr size
     putStrLn "Allocated buffers."
-    clFinish queue
+    finish queue
     putStrLn "Finished copying to buffers."
     -- Kernel arguments
     setKernelMemArg kernel 0 aMem
@@ -51,10 +51,10 @@ main = do
     putStrLn "Args set."
     enqueueNDRangeKernel queue kernel [size]
     putStrLn "Running..."
-    clFinish queue
+    finish queue
     putStrLn "Finished running!"
     enqueueReadBuffer queue ansMem size results
-    clFinish queue
+    finish queue
     mapM_ clReleaseMemObject [aMem,bMem,ansMem]
     putStrLn "Results are:"
     peekArray size results >>= print . take 10
