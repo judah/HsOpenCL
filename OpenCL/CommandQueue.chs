@@ -10,6 +10,22 @@ module OpenCL.CommandQueue(
                 queueContext,
                 getQueueProperties,
                 setQueueProperties,
+                -- * Events
+                Event,
+                waitForEvents,
+                eventCommandQueue,
+                CommandType(..),
+                eventCommandType,
+                getEventCommandExecutionStatus,
+                ExecutionStatus(..),
+                enqueueMarker,
+                enqueueWaitForEvents,
+                enqueueBarrier,
+                -- ** Profiling
+                getCommandQueued,
+                getCommandSubmit,
+                getCommandStart,
+                getCommandEnd,
                 ) where
 
 #include <OpenCL/OpenCL.h>
@@ -18,8 +34,8 @@ import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
 import Control.Monad
+import Control.Applicative
 
--- TODO: should this be called "Property" in singular?
 #c
 enum CommandQueueProperty {
     QueueOutOfOrderExecModeEnable = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,
@@ -101,4 +117,138 @@ setQueueProperties :: CommandQueue -> [CommandQueueProperty]
                                 -> Bool -> IO ()
 setQueueProperties queue props bool
     = clSetCommandQueueProperty queue props bool nullPtr
+
+------------------
+-- Events
+
+{#fun clWaitForEvents as waitForEvents
+  { withEvents* `[Event]'&
+  } -> `CLInt' checkSuccess-
+#}
+
+{#fun clGetEventInfo as getEventInfo
+  { withEvent* `Event'
+  , cEnum `CLEventInfo'
+  , `Int'
+  , id `Ptr ()'
+  , alloca- `Int' peekIntConv*
+  } -> `Int' checkSuccess*-
+#}
+
+#c
+enum CLEventInfo {
+    CLEventCommandQueue = CL_EVENT_COMMAND_QUEUE,
+    CLEventCommandType = CL_EVENT_COMMAND_TYPE,
+    CLEventReferenceCount = CL_EVENT_REFERENCE_COUNT,
+    CLEventCommandExecutionStatus = CL_EVENT_COMMAND_EXECUTION_STATUS,
+};
+#endc
+{#enum CLEventInfo {} #}
+    
+eventCommandQueue :: Event -> CommandQueue
+eventCommandQueue e@(Event fp)
+    = unsafePerformIO $ withForeignPtr fp $ \_ -> do
+        p <- getProp (getEventInfo e CLEventCommandQueue)
+        clRetainCommandQueue p
+        newCommandQueue p
+
+{#fun clRetainCommandQueue
+  { id `Ptr ()'
+  } -> `Int' checkSuccess*-
+#}
+
+
+#c
+enum CommandType {
+    CommandNdrangeKernel = CL_COMMAND_NDRANGE_KERNEL,
+    CommandTask = CL_COMMAND_TASK,
+    CommandNativeKernel = CL_COMMAND_NATIVE_KERNEL,
+    CommandReadBuffer = CL_COMMAND_READ_BUFFER,
+    CommandWriteBuffer = CL_COMMAND_WRITE_BUFFER,
+    CommandCopyBuffer = CL_COMMAND_COPY_BUFFER,
+    CommandReadImage = CL_COMMAND_READ_IMAGE,
+    CommandWriteImage = CL_COMMAND_WRITE_IMAGE,
+    CommandCopyImage = CL_COMMAND_COPY_IMAGE,
+    CommandCopyImageToBuffer = CL_COMMAND_COPY_IMAGE_TO_BUFFER,
+    CommandCopyBufferToImage = CL_COMMAND_COPY_BUFFER_TO_IMAGE,
+    CommandMapBuffer = CL_COMMAND_MAP_BUFFER,
+    CommandMapImage = CL_COMMAND_MAP_IMAGE,
+    CommandUnmapMemObject = CL_COMMAND_UNMAP_MEM_OBJECT,
+    CommandMarker = CL_COMMAND_MARKER,
+    CommandAcquireGlObjects = CL_COMMAND_ACQUIRE_GL_OBJECTS,
+    CommandReleaseGlObjects = CL_COMMAND_RELEASE_GL_OBJECTS
+};
+#endc
+{#enum CommandType {} deriving (Show,Eq)#}
+
+eventCommandType :: Event -> CommandType
+eventCommandType e = toEnum $ getPureProp (getEventInfo e CLEventCommandType)
+
+#c
+enum ExecutionStatus {
+    Complete = CL_COMPLETE,
+    Running = CL_RUNNING,
+    Submitted = CL_SUBMITTED,
+    Queued = CL_QUEUED
+};
+#endc
+{#enum ExecutionStatus {} deriving (Show,Eq)#}
+
+getEventCommandExecutionStatus :: Event -> IO ExecutionStatus
+getEventCommandExecutionStatus e = toEnum <$>
+    getProp (getEventInfo e CLEventCommandExecutionStatus)
+
+
+--------------------------
+
+{#fun clEnqueueMarker as enqueueMarker
+  { withCommandQueue* `CommandQueue'
+  , alloca- `Event' newEvent*
+  } -> `Int' checkSuccess-
+#}
+
+{#fun clEnqueueWaitForEvents as enqueueWaitForEvents
+  { withCommandQueue* `CommandQueue'
+  , withEvents* `[Event]'&
+  } -> `Int' checkSuccess-
+#}
+
+{#fun clEnqueueBarrier as enqueueBarrier
+  { withCommandQueue* `CommandQueue'
+  } -> `Int' checkSuccess-
+#}
+
+-----------------
+-- Profiling
+#c
+enum CLProfilingInfo {
+    CLProfilingCommandQueued = CL_PROFILING_COMMAND_QUEUED,
+    CLProfilingCommandSubmit = CL_PROFILING_COMMAND_SUBMIT,
+    CLProfilingCommandStart = CL_PROFILING_COMMAND_START,
+    CLProfilingCommandEnd = CL_PROFILING_COMMAND_END,
+};
+#endc
+{#enum CLProfilingInfo {} #}
+
+
+{#fun clGetEventProfilingInfo as getProfInfo
+  { withEvent* `Event'
+  , cEnum `CLProfilingInfo'
+  , `Int'
+  , id `Ptr ()'
+  , alloca- `Int' peekIntConv*
+  } -> `Int' checkSuccess*-
+#}
+
+getCommandQueued :: Event -> IO Word64
+getCommandQueued e = getProp (getProfInfo e CLProfilingCommandQueued)
+
+getCommandSubmit :: Event -> IO Word64
+getCommandSubmit e = getProp (getProfInfo e CLProfilingCommandSubmit)
+
+getCommandStart :: Event -> IO Word64
+getCommandStart e = getProp (getProfInfo e CLProfilingCommandStart)
+
+getCommandEnd :: Event -> IO Word64
+getCommandEnd e = getProp (getProfInfo e CLProfilingCommandEnd)
 

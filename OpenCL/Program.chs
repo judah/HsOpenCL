@@ -40,14 +40,9 @@ newCLProgram = newData Program clReleaseProgram
 -- TODO: ignoring the return value...
 foreign import ccall "&" clReleaseProgram :: Releaser Program_
 
-withByteStrings :: [ByteString] -> ([CStringLen] -> IO a) -> IO a
-withByteStrings [] f = f []
-withByteStrings (b:bs) f = withByteStrings bs $ \cs ->
-        unsafeUseAsCStringLen b $ \c -> f (c:cs)
-
 withByteStringPtrs :: [ByteString]
     -> (Ptr CString -> Ptr CULong -> IO a) -> IO a
-withByteStringPtrs bs f = withByteStrings bs $ \cs -> do
+withByteStringPtrs bs f = promote unsafeUseAsCStringLen bs $ \cs -> do
     let (cstrs, strLens) = unzip cs
     withArray cstrs $ \cstrP -> do
     withArray (map toEnum strLens) $ \lensP -> do

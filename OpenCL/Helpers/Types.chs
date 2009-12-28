@@ -64,6 +64,12 @@ retainedContextInfo child p = withForeignPtr child $ \_ -> do
     newContext p
 ------------
 
+promote :: (a -> (b -> IO c) -> IO c) -> [a] -> ([b] -> IO c) -> IO c
+promote withA = loop
+  where
+    loop [] f = f []
+    loop (x:xs) f = loop xs $ \ys -> withA x $ \y -> f (y:ys)
+
 data CommandQueue_
 newtype CommandQueue = CommandQueue (ForeignPtr CommandQueue_)
 withCommandQueue :: CommandQueue -> (Ptr () -> IO a) -> IO a
@@ -95,6 +101,21 @@ data Kernel_
 newtype Kernel = Kernel (ForeignPtr Kernel_)
 withKernel :: Kernel -> (Ptr () -> IO a) -> IO a
 withKernel (Kernel p) f = withForeignPtr p $ f . castPtr
+
+data Event_
+newtype Event = Event (ForeignPtr Event_)
+withEvent :: Event -> (Ptr () -> IO a) -> IO a
+withEvent (Event p) f = withForeignPtr p $ f . castPtr
+
+withEvents :: [Event] -> ((CUInt, Ptr (Ptr ())) -> IO a) -> IO a
+withEvents [] g = g (0,nullPtr) -- required by OpenCL spec
+withEvents es g = promote withEvent es $ \ps ->
+                    withArrayLen ps $ \len p_ps -> g (toEnum len, p_ps)
+
+newEvent :: Ptr (Ptr ()) -> IO Event
+newEvent p = peek p >>= newData Event clReleaseEvent
+
+foreign import ccall "&" clReleaseEvent :: Releaser Event_
 
 ---------
 -- Most of the types have a clGet*Info function following the same

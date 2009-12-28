@@ -110,7 +110,7 @@ runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     mems <- mapM (bufferArg cxt size) argPtrs
     finish queue
     zipWithM_ (setKernelMemArg kernel) [0..] mems
-    enqueueNDRangeKernel queue kernel [size]
+    enqueueNDRangeKernel queue kernel [size] []
     finish queue
     zipWithM_ (copyMutableArg queue size) mems argPtrs
     finish queue
@@ -152,11 +152,11 @@ withArgs (WriteOnly x:xs) f = withIOCArray x $ \p -> withArgs xs
 bufferArg :: SimpleProgram -> Int -> KernelPtrArg -> IO (Buffer ())
 bufferArg cxt size (ReadOnlyPtr p) = do
     mem <- createBuffer (simpleCxt cxt) MemReadOnly NoHostPtr size
-    enqueueWriteBuffer (simpleQueue cxt) mem size p
+    enqueueWriteBuffer (simpleQueue cxt) mem NonBlocking 0 size p []
     return $ castBuffer mem
 bufferArg cxt size (ReadWritePtr p) = do
     mem <- createBuffer (simpleCxt cxt) MemReadWrite NoHostPtr size
-    enqueueWriteBuffer (simpleQueue cxt) mem size p
+    enqueueWriteBuffer (simpleQueue cxt) mem NonBlocking 0 size p []
     return $ castBuffer mem
 bufferArg cxt size (WriteOnlyPtr (p::Ptr a)) = fmap castBuffer
     (createBuffer (simpleCxt cxt) MemWriteOnly NoHostPtr size
@@ -166,9 +166,11 @@ bufferArg cxt size (WriteOnlyPtr (p::Ptr a)) = fmap castBuffer
 copyMutableArg :: CommandQueue -> Int -> Buffer () -> KernelPtrArg -> IO ()
 copyMutableArg _ _ _ (ReadOnlyPtr _) = return ()
 copyMutableArg queue size mem (WriteOnlyPtr p) =
-    enqueueReadBuffer queue (castBuffer mem) size p
+    enqueueReadBuffer queue (castBuffer mem) NonBlocking 0 size p []
+        >> return ()
 copyMutableArg queue size mem (ReadWritePtr p) =
-    enqueueReadBuffer queue (castBuffer mem) size p
+    enqueueReadBuffer queue (castBuffer mem) NonBlocking 0 size p []
+        >> return ()
      
 
 

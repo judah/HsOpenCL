@@ -40,14 +40,13 @@ setKernelMemArg kernel arg mem = withBuffer mem $ \p -> with p $
   , id `Ptr CULong' -- currently, must be null.
   , id `Ptr CULong' -- global work size
   , id `Ptr CULong' -- local work size
-  , `Int'
-  , id `Ptr (Ptr ())'
-  , id `Ptr (Ptr ())'
+  , withEvents* `[Event]'&
+  , alloca- `Event' newEvent*
   } -> `Int' checkSuccess-
 #}
 
-enqueueNDRangeKernel :: CommandQueue -> Kernel -> [Int] -> IO ()
-enqueueNDRangeKernel queue kernel globalWorkSize
+-- TODO: local work sizes
+enqueueNDRangeKernel :: CommandQueue -> Kernel -> [Int] -> [Event] -> IO Event
+enqueueNDRangeKernel queue kernel globalWorkSize events
     = withArrayLen (map toEnum globalWorkSize) $ \dim workSizes ->
-        clEnqueueNDRangeKernel queue kernel dim nullPtr workSizes nullPtr 0 nullPtr
-                nullPtr
+        clEnqueueNDRangeKernel queue kernel dim nullPtr workSizes nullPtr events

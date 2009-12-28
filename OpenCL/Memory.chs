@@ -9,12 +9,10 @@ module OpenCL.Memory(
                 retainMemObject,
                 releaseMemObject,
                 -- * Reading, writing and copying buffers
+                IsBlocking(..),
                 enqueueReadBuffer,
-                enqueueReadBufferOff,
                 enqueueWriteBuffer,
-                enqueueWriteBufferOff,
                 enqueueCopyBuffer,
-                enqueueCopyBufferOff,
                 -- * Properties
                 memFlags,
                 memSize,
@@ -92,60 +90,56 @@ createBuffer context memAccess hostPtr size
             MemWriteOnly -> CLMemWriteOnly_
             MemReadOnly -> CLMemReadOnly_
 
+
+data IsBlocking = Blocking | NonBlocking
+                    deriving (Show,Eq)
+
+blockingFlag :: IsBlocking -> CUInt
+blockingFlag Blocking = 1
+blockingFlag NonBlocking = 0
+
 {#fun clEnqueueReadBuffer
   { withCommandQueue* `CommandQueue'
   , withBuffer* `Buffer a'
-  , cFromBool `Bool'
+  , blockingFlag `IsBlocking'
   , `Int'
   , `Int'
   , castPtr `Ptr a'
-  , `Int'
-  , id `Ptr (Ptr ())'
-  , id `Ptr (Ptr ())'
+  , withEvents*`[Event]'&
+  , alloca- `Event' newEvent*
   } -> `Int' checkSuccess-
 #}
 
-enqueueReadBuffer :: Storable a 
-        => CommandQueue -> Buffer a
-                -> Int -- ^ The number of elements to copy.
-                -> Ptr a -> IO ()
-enqueueReadBuffer queue mem = enqueueReadBufferOff queue mem 0
-
-enqueueReadBufferOff :: forall a . Storable a
-        => CommandQueue -> Buffer a -> Int -- ^ The offset index.
+enqueueReadBuffer :: forall a . Storable a 
+        => CommandQueue -> Buffer a -> IsBlocking
+                                -> Int -- ^ The offset index.
                                 -> Int -- ^ The number of elements to copy.
-                    -> Ptr a -> IO ()
-enqueueReadBufferOff queue mem offset size p
-    = clEnqueueReadBuffer queue mem True (offset * eltWidth) (size * eltWidth)
-                    p 0 nullPtr nullPtr
+                    -> Ptr a -> [Event] -> IO Event
+enqueueReadBuffer queue mem block offset size p
+    = clEnqueueReadBuffer queue mem block
+                            (offset * eltWidth) (size * eltWidth) p
   where eltWidth = sizeOf (undefined :: a)
 
 {#fun clEnqueueWriteBuffer
   { withCommandQueue* `CommandQueue'
   , withBuffer* `Buffer a'
-  , cFromBool `Bool'
+  , blockingFlag `IsBlocking'
   , `Int'
   , `Int'
   , castPtr `Ptr a'
-  , `Int'
-  , id `Ptr (Ptr ())'
-  , id `Ptr (Ptr ())'
+  , withEvents*`[Event]'&
+  , alloca- `Event' newEvent*
   } -> `Int' checkSuccess-
 #}
 
-enqueueWriteBuffer :: Storable a 
-        => CommandQueue -> Buffer a
-                -> Int  -- ^ The number of elements to copy.
-                -> Ptr a -> IO ()
-enqueueWriteBuffer queue mem = enqueueWriteBufferOff queue mem 0
-
-enqueueWriteBufferOff :: forall a . Storable a
-        => CommandQueue -> Buffer a -> Int -- ^ The offset index.
+enqueueWriteBuffer :: forall a . Storable a 
+        => CommandQueue -> Buffer a -> IsBlocking
+                                -> Int -- ^ The offset index.
                                 -> Int -- ^ The number of elements to copy.
-                                -> Ptr a -> IO ()
-enqueueWriteBufferOff queue mem offset size p
-    = clEnqueueWriteBuffer queue mem True (offset * eltWidth) (size * eltWidth)
-                    p 0 nullPtr nullPtr
+                                -> Ptr a -> [Event] -> IO Event
+enqueueWriteBuffer queue mem blocking offset size p
+    = clEnqueueWriteBuffer queue mem blocking
+                            (offset * eltWidth) (size * eltWidth) p
   where eltWidth = sizeOf (undefined :: a)
 
 {#fun clEnqueueCopyBuffer
@@ -155,32 +149,23 @@ enqueueWriteBufferOff queue mem offset size p
   , `Int'
   , `Int'
   , `Int'
-  , `Int'
-  , id `Ptr (Ptr ())'
-  , id `Ptr (Ptr ())'
+  , withEvents*`[Event]'&
+  , alloca- `Event' newEvent*
   } -> `Int' checkSuccess-
 #}
 
 enqueueCopyBuffer :: forall a . Storable a
-    => CommandQueue -> Buffer a -- ^ The source buffer.
-            -> Buffer a -- ^ The destination buffer.
-            -> Int -- ^ The number of elements to copy.
-            -> IO ()
-enqueueCopyBuffer queue source dest
-    = enqueueCopyBufferOff queue source dest 0 0
-
-enqueueCopyBufferOff :: forall a . Storable a
     => CommandQueue -> Buffer a -- ^ The source buffer
             -> Buffer a -- ^ The destination buffer.
             -> Int -- ^ The offset index in the source buffer.
             -> Int -- ^ The offset index in the destination.
             -> Int -- ^ The number of elements to copy.
-            -> IO ()
-enqueueCopyBufferOff queue source dest srcOff destOff size
+            -> [Event] -> IO Event
+enqueueCopyBuffer queue source dest srcOff destOff size
     = clEnqueueCopyBuffer queue source dest
             (srcOff * eltWidth)
             (destOff * eltWidth)
-            (size * eltWidth) 0 nullPtr nullPtr
+            (size * eltWidth)
   where eltWidth = sizeOf (undefined :: a)
 
 

@@ -29,7 +29,7 @@ main = do
     dev <- getDeviceID DeviceTypeGPU
     print ("device:",dev)
     context <- createContext [dev]
-    queue <- createCommandQueue context dev []
+    queue <- createCommandQueue context dev [QueueProfilingEnable]
     prog <- createProgramWithSource context [myprog]
     print "Created!"
     handle (\(e::CLError) -> do
@@ -48,9 +48,9 @@ main = do
     b :: Ptr Float <- newArray [n-1,n-2..0]
     results :: Ptr Float <- newArray $ replicate size 0
     aMem <- createBuffer context MemReadOnly NoHostPtr size
-    enqueueWriteBuffer queue aMem size a
+    enqueueWriteBuffer queue aMem NonBlocking 0 size a []
     bMem <- createBuffer context MemReadOnly NoHostPtr size
-    enqueueWriteBuffer queue bMem size b
+    enqueueWriteBuffer queue bMem NonBlocking 0 size b []
     ansMem <- createBuffer context MemReadWrite NoHostPtr size
     putStrLn "Allocated buffers."
     finish queue
@@ -60,14 +60,25 @@ main = do
     setKernelMemArg kernel 1 bMem
     setKernelMemArg kernel 2 ansMem
     putStrLn "Args set."
-    enqueueNDRangeKernel queue kernel [size]
+    eKernel <- enqueueNDRangeKernel queue kernel [size] []
     putStrLn "Running..."
     finish queue
     putStrLn "Finished running!"
-    enqueueReadBuffer queue ansMem size results
+    statEvent "enqueueNDRangeKernel" eKernel
+    enqueueReadBuffer queue ansMem NonBlocking 0 size results []
     finish queue
     mapM_ releaseMemObject [aMem,bMem,ansMem]
     putStrLn "Results are:"
     peekArray size results >>= print . take 10
 
-
+statEvent text e = do
+    putStrLn $ "--- Status: " ++ text ++ " --- "
+    putStr "Queued: " >> getCommandQueued e >>= print
+    putStr "Submit: " >> getCommandSubmit e >>= print
+    start <- getCommandStart e
+    end <- getCommandEnd e
+    putStrLn $ "Start: " ++ show start
+    putStrLn $ "End: " ++ show end
+    putStrLn $ "Duration: " ++ show (end-start)
+    putStrLn ""
+    
