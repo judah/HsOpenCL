@@ -114,7 +114,7 @@ runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     finish queue
     zipWithM_ (copyMutableArg queue size) mems argPtrs
     finish queue
-    mapM_ clReleaseMemObject mems
+    mapM_ releaseMemObject mems
 
 getCommonSize :: [KernelArg] -> IO Int
 getCommonSize [] = error "No kernel arguments"
@@ -149,26 +149,26 @@ withArgs (WriteOnly x:xs) f = withIOCArray x $ \p -> withArgs xs
 
 -- TODO: be more efficient
 -- We have to be careful since we don't want it to be freed
-bufferArg :: SimpleProgram -> Int -> KernelPtrArg -> IO (CLMem ())
+bufferArg :: SimpleProgram -> Int -> KernelPtrArg -> IO (Buffer ())
 bufferArg cxt size (ReadOnlyPtr p) = do
-    mem <- createBuffer (simpleCxt cxt) CLMemReadOnly NoHostPtr size
+    mem <- createBuffer (simpleCxt cxt) MemReadOnly NoHostPtr size
     enqueueWriteBuffer (simpleQueue cxt) mem size p
-    return $ castCLMem mem
+    return $ castBuffer mem
 bufferArg cxt size (ReadWritePtr p) = do
-    mem <- createBuffer (simpleCxt cxt) CLMemReadWrite NoHostPtr size
+    mem <- createBuffer (simpleCxt cxt) MemReadWrite NoHostPtr size
     enqueueWriteBuffer (simpleQueue cxt) mem size p
-    return $ castCLMem mem
-bufferArg cxt size (WriteOnlyPtr (p::Ptr a)) = fmap castCLMem
-    (createBuffer (simpleCxt cxt) CLMemWriteOnly NoHostPtr size
-        :: IO (CLMem a))
+    return $ castBuffer mem
+bufferArg cxt size (WriteOnlyPtr (p::Ptr a)) = fmap castBuffer
+    (createBuffer (simpleCxt cxt) MemWriteOnly NoHostPtr size
+        :: IO (Buffer a))
 
 
-copyMutableArg :: CommandQueue -> Int -> CLMem () -> KernelPtrArg -> IO ()
+copyMutableArg :: CommandQueue -> Int -> Buffer () -> KernelPtrArg -> IO ()
 copyMutableArg _ _ _ (ReadOnlyPtr _) = return ()
 copyMutableArg queue size mem (WriteOnlyPtr p) =
-    enqueueReadBuffer queue (castCLMem mem) size p
+    enqueueReadBuffer queue (castBuffer mem) size p
 copyMutableArg queue size mem (ReadWritePtr p) =
-    enqueueReadBuffer queue (castCLMem mem) size p
+    enqueueReadBuffer queue (castBuffer mem) size p
      
 
 

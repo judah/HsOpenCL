@@ -29,8 +29,8 @@ foreign import ccall "&" clReleaseKernel :: Releaser Kernel_
   } -> `Int' checkSuccess-
 #}
 
-setKernelMemArg :: Kernel -> Int -> CLMem a -> IO ()
-setKernelMemArg kernel arg mem = withCLMem mem $ \p -> with p $
+setKernelMemArg :: Kernel -> Int -> Buffer a -> IO ()
+setKernelMemArg kernel arg mem = withBuffer mem $ \p -> with p $
         clSetKernelArg kernel arg {#sizeof cl_mem#}
 
 {#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel

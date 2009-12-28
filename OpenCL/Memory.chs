@@ -1,12 +1,13 @@
 module OpenCL.Memory(
                 -- * Memory objects
-                CLMem,
-                castCLMem,
+                MemObject(),
+                Buffer,
+                castBuffer,
                 createBuffer,
-                CLMemAccess(..),
-                CLMemInit(..),
-                clRetainMemObject,
-                clReleaseMemObject,
+                MemAccessFlag(..),
+                MemInitFlag(..),
+                retainMemObject,
+                releaseMemObject,
                 -- * Reading, writing and copying buffers
                 enqueueReadBuffer,
                 enqueueReadBufferOff,
@@ -15,10 +16,10 @@ module OpenCL.Memory(
                 enqueueCopyBuffer,
                 enqueueCopyBufferOff,
                 -- * Properties
-                clMemFlags,
-                clMemSize,
-                clMemContext,
-                clGetMemReferenceCount,
+                memFlags,
+                memSize,
+                memContext,
+                getMemReferenceCount,
                 ) where
 
 #include <OpenCL/OpenCL.h>
@@ -33,8 +34,8 @@ import Control.Applicative
 --
 -- Images (restric types somehow...)
 
-castCLMem :: CLMem a -> CLMem b
-castCLMem (CLMem a) = CLMem a
+castBuffer :: Buffer a -> Buffer b
+castBuffer (Buffer a) = Buffer a
 
 #c
 enum CLMemFlags {
@@ -55,23 +56,25 @@ enum CLMemFlags {
   , `Int'
   , castPtr `Ptr a'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `CLMem a' newCLMem
+  } -> `Buffer a' newBuffer
 #}
 
-newCLMem :: Ptr () -> CLMem a
-newCLMem = CLMem . castPtr
+newBuffer :: Ptr () -> Buffer a
+newBuffer = Buffer . castPtr
 
-data CLMemAccess = CLMemReadWrite | CLMemWriteOnly | CLMemReadOnly
+data MemAccessFlag = MemReadWrite | MemWriteOnly | MemReadOnly
                     deriving (Show,Eq)
 
-data CLMemInit a = NoHostPtr | UseHostPtr (Ptr a)
+data MemInitFlag a = NoHostPtr | UseHostPtr (Ptr a)
                         | CopyHostPtr (Ptr a)
                         | AllocHostPtr
                         | CopyAllocHostPtr (Ptr a)
                     deriving (Show,Eq)
 
 createBuffer :: forall a . Storable a
-        => Context -> CLMemAccess -> CLMemInit a -> Int -> IO (CLMem a)
+        => Context -> MemAccessFlag -> MemInitFlag a
+            -> Int -- ^ The number of elements in the buffer.
+            -> IO (Buffer a)
 createBuffer context memAccess hostPtr size
     = clCreateBuffer context flags (size * eltSize) p'
   where 
@@ -85,13 +88,13 @@ createBuffer context memAccess hostPtr size
             AllocHostPtr -> ([CLMemAllocHostPtr_],nullPtr)
             CopyAllocHostPtr p -> ([CLMemCopyHostPtr_,CLMemAllocHostPtr_],p)
     memFlag = case memAccess of
-            CLMemReadWrite -> CLMemReadWrite_
-            CLMemWriteOnly -> CLMemWriteOnly_
-            CLMemReadOnly -> CLMemReadOnly_
+            MemReadWrite -> CLMemReadWrite_
+            MemWriteOnly -> CLMemWriteOnly_
+            MemReadOnly -> CLMemReadOnly_
 
 {#fun clEnqueueReadBuffer
   { withCommandQueue* `CommandQueue'
-  , withCLMem* `CLMem a'
+  , withBuffer* `Buffer a'
   , cFromBool `Bool'
   , `Int'
   , `Int'
@@ -103,13 +106,13 @@ createBuffer context memAccess hostPtr size
 #}
 
 enqueueReadBuffer :: Storable a 
-        => CommandQueue -> CLMem a
+        => CommandQueue -> Buffer a
                 -> Int -- ^ The number of elements to copy.
                 -> Ptr a -> IO ()
 enqueueReadBuffer queue mem = enqueueReadBufferOff queue mem 0
 
 enqueueReadBufferOff :: forall a . Storable a
-        => CommandQueue -> CLMem a -> Int -- ^ The offset index.
+        => CommandQueue -> Buffer a -> Int -- ^ The offset index.
                                 -> Int -- ^ The number of elements to copy.
                     -> Ptr a -> IO ()
 enqueueReadBufferOff queue mem offset size p
@@ -119,7 +122,7 @@ enqueueReadBufferOff queue mem offset size p
 
 {#fun clEnqueueWriteBuffer
   { withCommandQueue* `CommandQueue'
-  , withCLMem* `CLMem a'
+  , withBuffer* `Buffer a'
   , cFromBool `Bool'
   , `Int'
   , `Int'
@@ -131,13 +134,13 @@ enqueueReadBufferOff queue mem offset size p
 #}
 
 enqueueWriteBuffer :: Storable a 
-        => CommandQueue -> CLMem a
+        => CommandQueue -> Buffer a
                 -> Int  -- ^ The number of elements to copy.
                 -> Ptr a -> IO ()
 enqueueWriteBuffer queue mem = enqueueWriteBufferOff queue mem 0
 
 enqueueWriteBufferOff :: forall a . Storable a
-        => CommandQueue -> CLMem a -> Int -- ^ The offset index.
+        => CommandQueue -> Buffer a -> Int -- ^ The offset index.
                                 -> Int -- ^ The number of elements to copy.
                                 -> Ptr a -> IO ()
 enqueueWriteBufferOff queue mem offset size p
@@ -147,8 +150,8 @@ enqueueWriteBufferOff queue mem offset size p
 
 {#fun clEnqueueCopyBuffer
   { withCommandQueue* `CommandQueue'
-  , withCLMem* `CLMem a'
-  , withCLMem* `CLMem a'
+  , withBuffer* `Buffer a'
+  , withBuffer* `Buffer a'
   , `Int'
   , `Int'
   , `Int'
@@ -159,16 +162,16 @@ enqueueWriteBufferOff queue mem offset size p
 #}
 
 enqueueCopyBuffer :: forall a . Storable a
-    => CommandQueue -> CLMem a -- ^ The source buffer.
-            -> CLMem a -- ^ The destination buffer.
+    => CommandQueue -> Buffer a -- ^ The source buffer.
+            -> Buffer a -- ^ The destination buffer.
             -> Int -- ^ The number of elements to copy.
             -> IO ()
 enqueueCopyBuffer queue source dest
     = enqueueCopyBufferOff queue source dest 0 0
 
 enqueueCopyBufferOff :: forall a . Storable a
-    => CommandQueue -> CLMem a -- ^ The source buffer
-            -> CLMem a -- ^ The destination buffer.
+    => CommandQueue -> Buffer a -- ^ The source buffer
+            -> Buffer a -- ^ The destination buffer.
             -> Int -- ^ The offset index in the source buffer.
             -> Int -- ^ The offset index in the destination.
             -> Int -- ^ The number of elements to copy.
@@ -181,19 +184,22 @@ enqueueCopyBufferOff queue source dest srcOff destOff size
   where eltWidth = sizeOf (undefined :: a)
 
 
-{#fun clRetainMemObject
-  { withCLMem* `CLMem a'
+{#fun clRetainMemObject as retainMemObject
+  `MemObject m' =>
+  { memObjectPtr `m'
   } -> `Int' checkSuccess-
 #}
 
-{#fun clReleaseMemObject
-  { withCLMem* `CLMem a'
+{#fun clReleaseMemObject as releaseMemObject
+  `MemObject m' =>
+  { memObjectPtr `m'
   } -> `Int' checkSuccess-
 #}
 
 
 {#fun clGetMemObjectInfo as getMemInfo
-  { withCLMem* `CLMem a'
+  `MemObject m' =>
+  { memObjectPtr `m'
   , cEnum `CLMemInfo'
   , `Int'
   , id `Ptr ()'
@@ -215,15 +221,15 @@ enum CLMemInfo {
 {#enum CLMemInfo {} #}
 
 
-clMemFlags :: CLMem a -> (CLMemAccess, CLMemInit a)
-clMemFlags m = (accessFlag exists, memInit)
+memFlags :: MemObject m => m -> (MemAccessFlag, MemInitFlag a)
+memFlags m = (accessFlag exists, memInit)
   where
     exists = getPureProp (getMemInfo m CLMemFlags)
     memInit = getMemInitFlags exists
     accessFlag exists
-        | exists CLMemReadOnly_ = CLMemReadOnly
-        | exists CLMemWriteOnly_ = CLMemWriteOnly
-        | otherwise = CLMemReadWrite
+        | exists CLMemReadOnly_ = MemReadOnly
+        | exists CLMemWriteOnly_ = MemWriteOnly
+        | otherwise = MemReadWrite
     getPtrProp constr = constr $ getPureProp (getMemInfo m CLMemHostPtr)
     getMemInitFlags exists
         | exists CLMemUseHostPtr_   = getPtrProp UseHostPtr
@@ -233,21 +239,32 @@ clMemFlags m = (accessFlag exists, memInit)
         | exists CLMemAllocHostPtr_ = AllocHostPtr
         | otherwise = NoHostPtr
         
-
-clMemSize :: forall a . Storable a => CLMem a -> Int
-clMemSize m = getPureProp (getMemInfo m CLMemSize)
-                `div` sizeOf (undefined :: a)
+-- | Size of the data store, in bytes.
+memSize :: MemObject m => m -> Int
+memSize m = getPureProp (getMemInfo m CLMemSize)
 
 -- Since the Mem doesn't have an associated finalizer, we don't have to
 -- worry about races like we do in clQueue.
 -- Well, there's still a tiny race if another thread releases the Mem and 
 -- context in the middle of our computation; but it's reasonable
--- to expect that the CLMem (and thus, OpenCL ensures, the Context) isn't
+-- to expect that the Buffer (and thus, OpenCL ensures, the Context) isn't
 -- freed by other threads during this computation.
-clMemContext :: CLMem a -> Context
-clMemContext m = unsafePerformIO $
+memContext :: MemObject m => m -> Context
+memContext m = unsafePerformIO $
                     getProp (getMemInfo m CLMemContext) >>= newContext
 
-clGetMemReferenceCount :: CLMem a -> IO Int
-clGetMemReferenceCount m
+getMemReferenceCount :: MemObject m => m -> IO Int
+getMemReferenceCount m
     = getProp (getMemInfo m CLMemReferenceCount)
+
+--------
+--  Opaque class for cl_mem
+-- 
+-- There's a lot of ways we could go with the mem objects;
+-- but this API shouldn't add too much to what's already in OpenCL.
+
+class MemObject m where
+    memObjectPtr :: m -> Ptr ()
+
+instance MemObject (Buffer a) where
+    memObjectPtr (Buffer p) = castPtr p

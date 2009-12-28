@@ -47,11 +47,11 @@ main = do
     a :: Ptr Float <- newArray [0..n-1]
     b :: Ptr Float <- newArray [n-1,n-2..0]
     results :: Ptr Float <- newArray $ replicate size 0
-    aMem <- createBuffer context CLMemReadOnly NoHostPtr size
+    aMem <- createBuffer context MemReadOnly NoHostPtr size
     enqueueWriteBuffer queue aMem size a
-    bMem <- createBuffer context CLMemReadOnly NoHostPtr size
+    bMem <- createBuffer context MemReadOnly NoHostPtr size
     enqueueWriteBuffer queue bMem size b
-    ansMem <- createBuffer context CLMemReadWrite NoHostPtr size
+    ansMem <- createBuffer context MemReadWrite NoHostPtr size
     putStrLn "Allocated buffers."
     finish queue
     putStrLn "Finished copying to buffers."
@@ -66,7 +66,7 @@ main = do
     putStrLn "Finished running!"
     enqueueReadBuffer queue ansMem size results
     finish queue
-    mapM_ clReleaseMemObject [aMem,bMem,ansMem]
+    mapM_ releaseMemObject [aMem,bMem,ansMem]
     putStrLn "Results are:"
     peekArray size results >>= print . take 10
 

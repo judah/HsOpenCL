@@ -24,15 +24,15 @@ testQueueInfos q = do
     getQueueProperties q >>= print
 
 testBufferInfos cxt = do
-    putStrLn "--- CLMem ---"
+    putStrLn "--- Buffer ---"
     p :: Ptr Float <- newArray [1..10]
     print p
-    buf :: CLMem Float <- createBuffer cxt CLMemReadOnly (CopyAllocHostPtr p) 5
-    clGetMemReferenceCount buf >>= print
-    clRetainMemObject buf
-    clGetMemReferenceCount buf >>= print
+    buf :: Buffer Float <- createBuffer cxt MemReadOnly (CopyAllocHostPtr p) 5
+    getMemReferenceCount buf >>= print
+    retainMemObject buf
+    getMemReferenceCount buf >>= print
     putStrLn "Flags:"
-    print $ clMemFlags buf
-    print $ clMemSize buf
-    buf2 :: CLMem Float <- createBuffer cxt CLMemReadWrite (UseHostPtr p) 5
-    print $ clMemFlags buf
+    print $ memFlags buf
+    print $ memSize buf
+    buf2 :: Buffer Float <- createBuffer cxt MemReadWrite (UseHostPtr p) 5
+    print $ memFlags buf

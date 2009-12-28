@@ -79,17 +79,17 @@ withProgram (Program p) f = withForeignPtr p $ f . castPtr
 -- once it's finished.
 -- So if we tried storing them in a ForeignPtr like the other types,
 -- we could get the following race:
--- 1. Create CLMem for an input argument
+-- 1. Create Buffer for an input argument
 -- 2. Call OpenCL to fill it with values
 -- 3. Set it as a kernel arg
 -- 4. Haskell GC
 -- 5. Run kernel
--- If the CLMem is never used after step 5, it will be released prematurely
+-- If the Buffer is never used after step 5, it will be released prematurely
 -- in step 4.  
-data CLMem_
-newtype CLMem a = CLMem (Ptr CLMem_)
-withCLMem :: CLMem a -> (Ptr () -> IO b) -> IO b
-withCLMem (CLMem p) f = f $ castPtr p
+data Buffer_
+newtype Buffer a = Buffer (Ptr Buffer_)
+withBuffer :: Buffer a -> (Ptr () -> IO b) -> IO b
+withBuffer (Buffer p) f = f $ castPtr p
 
 data Kernel_
 newtype Kernel = Kernel (ForeignPtr Kernel_)
