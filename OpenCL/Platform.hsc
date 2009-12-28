@@ -53,7 +53,7 @@ module OpenCL.Platform(
             deviceQueueProperties,
             deviceName,
             deviceVendor,
-            clDriverVersion,
+            driverVersion,
             deviceProfile,
             deviceVersion,
             deviceExtensions,
@@ -224,8 +224,8 @@ deviceName = deviceInfo (#const CL_DEVICE_NAME)
 deviceVendor :: DeviceID -> String
 deviceVendor = deviceInfo (#const CL_DEVICE_VENDOR)
 
-clDriverVersion :: DeviceID -> String
-clDriverVersion = deviceInfo (#const CL_DRIVER_VERSION)
+driverVersion :: DeviceID -> String
+driverVersion = deviceInfo (#const CL_DRIVER_VERSION)
 
 deviceProfile :: DeviceID -> String
 deviceProfile = deviceInfo (#const CL_DEVICE_PROFILE)

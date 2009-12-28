@@ -52,7 +52,7 @@ allNames = [
             ,'deviceQueueProperties
             ,'deviceName
             ,'deviceVendor
-            ,'clDriverVersion
+            ,'driverVersion
             ,'deviceProfile
             ,'deviceVersion
             ,'deviceExtensions
