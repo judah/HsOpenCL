@@ -1,7 +1,8 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, QuasiQuotes#-}
 module Main where
 
 import OpenCL
+import MultiLine
 
 import Foreign
 import Foreign.C
@@ -11,15 +12,25 @@ import System.Environment
 
 import Control.Exception
 
+myprog = [$clProg|
+__kernel void
+add(__global float *a,
+    __global float *b,
+    __global float *answer)
+{
+    int gid = get_global_id(0);
+    answer[gid] = a[gid] * b[gid];
+}
+|]
+
 main = do
     [n] <- getArgs
     let file = "test_prog.cl"
-    contents <- B.readFile file
     dev <- getDeviceID DeviceTypeGPU
     print ("device:",dev)
     context <- createContext [dev]
     queue <- createCommandQueue context dev []
-    prog <- createProgramWithSource context [contents]
+    prog <- createProgramWithSource context [myprog]
     print "Created!"
     handle (\(e::CLError) -> do
                 print ("exception:",e)
