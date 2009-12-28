@@ -18,6 +18,7 @@ import Foreign
 import Control.Applicative
 import Control.Monad
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
 
 -- TODO: this isn't really necessary, since
 -- all of the types can ask for their context/id/etc.
@@ -43,9 +44,9 @@ buildSimpleProgram did cxt sources = do
     handle (\(e::CLError) -> do
                 hPutStrLn stderr $ "Error building program: " ++ show e
                 log <- getBuildLog prog did
-                putStrLn log
+                B.putStrLn log
                 throw e)
-        $ buildProgram prog
+        $ buildProgram prog ""
     return prog
 
 

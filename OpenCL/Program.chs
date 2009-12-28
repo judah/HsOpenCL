@@ -1,7 +1,17 @@
 module OpenCL.Program(Program,
                     createProgramWithSource,
+                    createProgramWithBinary,
                     buildProgram,
+                    unloadCompiler,
+                    -- Queries
+                    programContext,
+                    programDevices,
+                    programSource,
+                    programBinaries,
+                    -- Build info
                     BuildStatus(..),
+                    getBuildStatus,
+                    getBuildOptions,
                     getBuildLog,
                 ) where
 
@@ -11,13 +21,15 @@ import OpenCL.Helpers.C2HS
 import OpenCL.Error
 
 import Control.Applicative
-import qualified Data.ByteString as B
+import Control.Monad
+import Data.ByteString (ByteString, packCStringLen)
 import Data.ByteString.Unsafe (unsafeUseAsCStringLen)
+import Data.ByteString.Internal (fromForeignPtr, mallocByteString)
 
 {#fun clCreateProgramWithSource as clCreateProgramWithSource
   { withContext* `Context'
   , `Int'
-  , id `Ptr CString'
+  , castPtr `Ptr CString'
   , id `Ptr CULong'
   , alloca- `Ptr CInt' checkSuccessPtr*-
   } -> `Program' newCLProgram*
@@ -28,21 +40,57 @@ newCLProgram = newData Program clReleaseProgram
 -- TODO: ignoring the return value...
 foreign import ccall "&" clReleaseProgram :: Releaser Program_
 
--- TODO: make sure this is safe
--- - exceptions
-createProgramWithSource :: Context -> [B.ByteString] -> IO Program
-createProgramWithSource context bs = withByteStrings bs $ \cs -> do
-    let (cstrs, strLens) = unzip cs
-    withArrayLen cstrs $ \count cstrsArr -> do
-    withArray (map toEnum strLens) $ \lenArr -> do
-    prog <- clCreateProgramWithSource context
-                    count cstrsArr lenArr
-    return prog
-
-withByteStrings :: [B.ByteString] -> ([CStringLen] -> IO a) -> IO a
+withByteStrings :: [ByteString] -> ([CStringLen] -> IO a) -> IO a
 withByteStrings [] f = f []
 withByteStrings (b:bs) f = withByteStrings bs $ \cs ->
         unsafeUseAsCStringLen b $ \c -> f (c:cs)
+
+withByteStringPtrs :: [ByteString]
+    -> (Ptr CString -> Ptr CULong -> IO a) -> IO a
+withByteStringPtrs bs f = withByteStrings bs $ \cs -> do
+    let (cstrs, strLens) = unzip cs
+    withArray cstrs $ \cstrP -> do
+    withArray (map toEnum strLens) $ \lensP -> do
+    f (castPtr cstrP) lensP
+
+createN :: [Int] -> (Ptr CString -> IO ()) -> IO [ByteString]
+createN sizes f = do
+    -- It's a little bit of a hack to create ByteStrings and then modify
+    -- their internals, but it's safe since no other function has access
+    -- to the ByteStrings until we return them.
+    bs <- forM sizes $ \s -> (\fp -> fromForeignPtr fp 0 s) <$> mallocByteString s
+    withByteStringPtrs bs $ \cs _ -> f cs
+    return bs
+
+createProgramWithSource :: Context -> [ByteString] -> IO Program
+createProgramWithSource context bs = withByteStringPtrs bs $ \cs lenP -> 
+    clCreateProgramWithSource context (length bs) cs lenP
+
+{#fun clCreateProgramWithBinary
+  { withContext* `Context'
+  , `Int'
+  , id `Ptr (Ptr ())' -- devices
+  , id `Ptr CULong'
+  , castPtr `Ptr CString'
+  , id `Ptr CInt' -- binary statuses
+  , alloca- `Ptr CInt' checkSuccessPtr*-
+  } -> `Program' newCLProgram*
+#}
+
+-- TODO: 
+-- Handle if InvalidBinary is thrown, and if so do something?
+-- use error?  Other thing?
+-- maybe add another constructor to CLError?
+createProgramWithBinary :: Context -> [(DeviceID,ByteString)] -> IO Program
+createProgramWithBinary cxt devBinaries = do
+    let (devs,binaries) = unzip devBinaries
+    withArrayLen (map deviceIDPtr devs) $ \numDevices devsP -> do
+    withByteStringPtrs binaries $ \binariesP lengthsP -> do
+    allocaArray numDevices $ \statuses -> do
+    clCreateProgramWithBinary cxt numDevices devsP lengthsP
+                    binariesP statuses
+
+
 
 
 {#fun clBuildProgram as clBuildProgram
@@ -55,8 +103,62 @@ withByteStrings (b:bs) f = withByteStrings bs $ \cs ->
   } -> `Int' checkSuccess*-
 #}
 
-buildProgram :: Program -> IO ()
-buildProgram prog = clBuildProgram prog 0 nullPtr "" nullFunPtr nullPtr
+-- TODO: options should be String or ByteString?
+-- TODO: device_list argument (seems somewhat superfluous...)  Maybe [DeviceID]
+buildProgram :: Program -> String -> IO ()
+buildProgram prog options = clBuildProgram prog 0 nullPtr options nullFunPtr nullPtr
+
+{#fun clUnloadCompiler as unloadCompiler
+  { } -> `Int' checkSuccess*-
+#}
+
+#c
+enum CLProgramInfo {
+    CLProgramContext = CL_PROGRAM_CONTEXT,
+    CLProgramNumDevices = CL_PROGRAM_NUM_DEVICES,
+    CLProgramDevices = CL_PROGRAM_DEVICES,
+    CLProgramSource = CL_PROGRAM_SOURCE,
+    CLProgramBinarySizes = CL_PROGRAM_BINARY_SIZES,
+    CLProgramBinaries = CL_PROGRAM_BINARIES
+};
+#endc
+{#enum CLProgramInfo {} #}
+
+{#fun clGetProgramInfo as getInfo
+  { withProgram* `Program'
+  , cEnum `CLProgramInfo'
+  , `Int'
+  , id `Ptr ()'
+  , alloca- `Int' peekIntConv*
+  } -> `Int' checkSuccess*-
+#}
+
+programContext :: Program -> Context
+programContext p@(Program fp)
+    = unsafePerformIO $ withForeignPtr fp $ \_ ->
+            getProp (getInfo p CLProgramContext)
+                >>= retainedCLContext
+
+programDevices :: Program -> [DeviceID]
+programDevices p = map DeviceID $ unsafePerformIO
+        $ getArrayN (getPureProp (getInfo p CLProgramNumDevices))
+                (getInfo p CLProgramDevices)
+
+-- Note the spec ensures that the returned char[] is null-terminated,
+-- so it's OK to use ByteString's Property instance.
+programSource :: Program -> ByteString
+programSource p = getPureProp $ getInfo p CLProgramSource
+
+-- NB: one for each device associated with the program.
+programBinaries :: Program -> IO [ByteString]
+programBinaries prog = do
+    numDevs <- getProp (getInfo prog CLProgramNumDevices)
+    sizes :: [CSize] <- getArrayN numDevs (getInfo prog CLProgramBinarySizes)
+    createN (map fromEnum sizes) $ \cstrs -> do
+        let infoSize = sizeOf (undefined :: CString) * numDevs
+        r <- getInfo prog CLProgramBinaries infoSize (castPtr cstrs)
+        when (infoSize /= r) $ error "programBinaries: bad result size"
+
 
 #c
 enum CLProgramBuildInfo {
@@ -72,13 +174,13 @@ enum BuildStatus {
     BuildNone = CL_BUILD_NONE,
     BuildError = CL_BUILD_ERROR,
     BuildSuccess = CL_BUILD_SUCCESS,
-    BuildInProgramss = CL_BUILD_IN_PROGRESS
+    BuildInProgress = CL_BUILD_IN_PROGRESS
 };
 #endc
 {#enum BuildStatus {} deriving (Show,Eq)#}
     
 
-{#fun clGetProgramBuildInfo as clGetProgramBuildInfo
+{#fun clGetProgramBuildInfo as getBuildInfo
   { withProgram* `Program'
   , deviceIDPtr `DeviceID'
   , cEnum `CLProgramBuildInfo'
@@ -88,7 +190,14 @@ enum BuildStatus {
   } -> `Int' checkSuccess*-
 #}
 
--- TODO: should be ByteString?
-getBuildLog :: Program -> DeviceID -> IO String
+getBuildStatus :: Program -> DeviceID -> IO BuildStatus
+getBuildStatus prog device = toEnum <$> (getProp $
+        getBuildInfo prog device CLProgramBuildStatus)
+
+getBuildOptions :: Program -> DeviceID -> IO String
+getBuildOptions prog device = getProp $
+        getBuildInfo prog device CLProgramBuildOptions
+
+getBuildLog :: Program -> DeviceID -> IO ByteString
 getBuildLog prog device = getProp $
-        clGetProgramBuildInfo prog device CLProgramBuildLog
+        getBuildInfo prog device CLProgramBuildLog

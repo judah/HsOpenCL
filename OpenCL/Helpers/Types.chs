@@ -10,6 +10,9 @@ import Control.Monad
 import OpenCL.Error
 import OpenCL.Helpers.C2HS
 
+import Data.ByteString.Char8 (ByteString, unpack)
+import Data.ByteString.Unsafe(unsafePackMallocCString)
+
 -- I'm assuming that types like cl_device_id are actually pointers,
 -- so they can be passed around by the FFI.
 -- This is true on Apple systems, but I'm not sure how portable it is.
@@ -150,12 +153,18 @@ instance Storable a => Property [a] where
         retSize <- getInfo 0 nullPtr
         getArrayN (retSize `div` sizeOf (undefined :: a)) getInfo
 
+-- NOTE: the String and ByteString instances are useful ONLY for reading
+-- null-terminated data.
+-- To read binary data, see e.g. createProgramWithBinary.
 instance Property String where
+    getProp getInfo = unpack <$> getProp getInfo
+
+instance Property ByteString where
     getProp getInfo = do
         size <- getInfo 0 nullPtr
-        allocaArray size $ \p -> do
+        p <- mallocArray size
         getInfo size (castPtr p)
-        peekCString p
+        unsafePackMallocCString p
 
 getArrayN :: forall a . Storable a => Int -> GetInfoFunc -> IO [a]
 getArrayN numEntries getInfo = allocaArray numEntries $ \p -> do
