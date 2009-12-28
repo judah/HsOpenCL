@@ -7,7 +7,7 @@ module OpenCL.Program(Program,
                     programContext,
                     programDevices,
                     programSource,
-                    programBinaries,
+                    getProgramBinaries,
                     -- Build info
                     BuildStatus(..),
                     getBuildStatus,
@@ -150,14 +150,14 @@ programSource :: Program -> ByteString
 programSource p = getPureProp $ getInfo p CLProgramSource
 
 -- NB: one for each device associated with the program.
-programBinaries :: Program -> IO [ByteString]
-programBinaries prog = do
+getProgramBinaries :: Program -> IO [ByteString]
+getProgramBinaries prog = do
     numDevs <- getProp (getInfo prog CLProgramNumDevices)
     sizes :: [CSize] <- getArrayN numDevs (getInfo prog CLProgramBinarySizes)
     createN (map fromEnum sizes) $ \cstrs -> do
         let infoSize = sizeOf (undefined :: CString) * numDevs
         r <- getInfo prog CLProgramBinaries infoSize (castPtr cstrs)
-        when (infoSize /= r) $ error "programBinaries: bad result size"
+        when (infoSize /= r) $ error "getProgramBinaries: bad result size"
 
 
 #c

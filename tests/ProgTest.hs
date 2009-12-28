@@ -33,14 +33,14 @@ testBinaryBuild files = do
     bs <- mapM B.readFile files
     prog <- createProgramWithSource cxt bs
     buildProgram prog ""
-    bins <- programBinaries prog
+    bins <- getProgramBinaries prog
     putStrLn "Binaries:"
     print (length bins, map B.length bins)
     putStrLn "About to create:"
     prog2 <- createProgramWithBinary cxt (zip devs bins)
     print $ programDevices prog2
     putStrLn "Binaries:"
-    programBinaries prog2 >>= mapM_ print
+    getProgramBinaries prog2 >>= mapM_ print
     putStrLn "About to build:"
     handle (\(e::CLError) -> do
             putStrLn "*********\n**********"
@@ -55,7 +55,7 @@ showInfos prog = do
     putStrLn "Source:"
     print (programSource prog)
     putStrLn "Binaries"
-    programBinaries prog >>= mapM_ print
+    getProgramBinaries prog >>= mapM_ print
     let devs = programDevices prog
     let devs2 = contextDevices $ programContext prog
     putStrLn "Devices:"
