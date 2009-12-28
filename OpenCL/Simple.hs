@@ -2,14 +2,16 @@ module OpenCL.Simple(
             SimpleProgram(..),
             DeviceType(..),
             newSimpleProgram,
-            KernelFunc(),
             getKernelFunc,
+            KernelArg(),
+            KernelFunc(),
             )
              where
 
 import OpenCL
 import Data.Array.CArray
 import Data.Array.IOCArray
+import Data.Array.CArray.Base(unsafeFreezeIOCArray, IOCArray(..))
 import System.IO
 import Control.Exception
 import Foreign
@@ -48,31 +50,55 @@ buildSimpleProgram did cxt sources = do
     return prog
 
 -- Add note that Doubles probably won't work...
-data KernelArg where
-    ReadOnly :: Storable a => CArray Int a -> KernelArg
-    ReadWrite :: Storable a => IOCArray Int a -> KernelArg
-    WriteOnly :: Storable a => IOCArray Int a -> KernelArg
+data WrappedArg where
+    ReadOnly :: (Ix i, Storable a) => CArray i a -> WrappedArg
+    ReadWrite :: (Ix i, Storable a) => IOCArray i a -> WrappedArg
+    WriteOnly :: (Ix i, Storable a) => IOCArray i a -> WrappedArg
 
 -- This code inspired by the Translatable class from the llvm package.
 class KernelFunc f where
-    applyKFunc :: ([KernelArg] -> IO ()) -> [KernelArg] -> f
+    applyKFunc :: ([WrappedArg] -> IO ())-> Int -> [WrappedArg] -> f
 
 -- TODO: probably more caching opportunities, but whatever for now.
+--
+-- TODO: better handling of sizes.  type checker should prevent bad
+-- TypeFuncs.
+-- (also each array should be the same size type...)
+-- type func SizeDim f
+-- (or, just use Int...)
+--
+-- Also, (Int -> f) might be ok...
 getKernelFunc :: KernelFunc f => SimpleProgram -> String -> IO f
 getKernelFunc prog text = do
     kernel <- createKernel (simpleProgram prog) text
-    return $ applyKFunc (runKernel prog kernel) []
+    let size = error "Unable to guess size from parameters"
+    return $ applyKFunc (runKernel prog kernel) size []
+
+class KernelArg a where
+    toArg :: a -> WrappedArg
+    argSize :: a -> Int
+
+instance (Ix i, Storable e) => KernelArg (CArray i e) where
+    toArg = ReadOnly
+    argSize = rangeSize . bounds
+
+instance (Ix i, Storable e) => KernelArg (IOCArray i e) where
+    toArg = ReadWrite
+    argSize (IOCArray _ _ n _) = n
+
+instance (KernelArg a, KernelFunc f) => KernelFunc (a -> f) where
+    applyKFunc run _ as = \a -> applyKFunc run (argSize a) (toArg a:as)
 
 instance KernelFunc (IO ()) where
-    applyKFunc run args = run $ reverse args
+    applyKFunc run _ as = run $ reverse $ as
 
-instance (Storable a, KernelFunc f) => KernelFunc (CArray Int a -> f) where
-    applyKFunc run as = \a -> applyKFunc run (ReadOnly a:as)
+instance (Storable e) => KernelFunc (IO (CArray Int e)) where
+    applyKFunc run size as = do
+        res <- newArray_ (0,size-1)
+        run $ reverse $ ReadWrite res : as
+        unsafeFreezeIOCArray res
 
-instance (Storable a, KernelFunc f) => KernelFunc (IOCArray Int a -> f) where
-    applyKFunc run as = \a -> applyKFunc run (WriteOnly a:as)
-
-runKernel :: SimpleProgram -> Kernel -> [KernelArg] -> IO ()
+runKernel :: SimpleProgram -> Kernel -> [WrappedArg] -> IO ()
 runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     let queue = simpleQueue cxt
     size <- getCommonSize args
@@ -85,18 +111,18 @@ runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     finish queue
     mapM_ releaseMemObject mems
 
-getCommonSize :: [KernelArg] -> IO Int
+getCommonSize :: [WrappedArg] -> IO Int
 getCommonSize [] = error "No kernel arguments"
 getCommonSize ks = do
     (size:sizes) <- mapM getArgSize ks
     if any (/=size) sizes
         then error "Kernel arguments are not all the same size"
         else return size
-  where
-    getArgSize :: KernelArg -> IO Int
-    getArgSize (ReadOnly a) = return $ rangeSize $ bounds a
-    getArgSize (ReadWrite a) = rangeSize <$> getBounds a
-    getArgSize (WriteOnly a) = rangeSize <$> getBounds a
+
+getArgSize :: WrappedArg -> IO Int
+getArgSize (ReadOnly a) = return $ rangeSize $ bounds a
+getArgSize (ReadWrite a) = rangeSize <$> getBounds a
+getArgSize (WriteOnly a) = rangeSize <$> getBounds a
 
 data KernelPtrArg where
     ReadOnlyPtr :: Storable a =>  Ptr a -> KernelPtrArg
@@ -104,7 +130,7 @@ data KernelPtrArg where
     WriteOnlyPtr :: Storable a => Ptr a -> KernelPtrArg
 
 -- make sure we retain the ForeignPtrs for the whole computation:
-withArgs :: [KernelArg] -> ([KernelPtrArg] -> IO a) -> IO a
+withArgs :: [WrappedArg] -> ([KernelPtrArg] -> IO a) -> IO a
 withArgs [] f = f []
 withArgs (ReadOnly x:xs) f = withCArray x $ \p -> withArgs xs 
                                 $ \ys -> f (ReadOnlyPtr p:ys)
