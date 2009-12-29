@@ -28,12 +28,17 @@ newData :: (ForeignPtr a_ -> a) -> Releaser a_
 newData construct release p = construct <$> newForeignPtr release (castPtr p)
 
 
--- Note that unlike the others, DeviceID has no way to be released
--- so it's just a pointer.
+-- Note that unlike the others, DeviceID and PlatformID have no way to be
+-- released, so it's just a pointer.
 data DeviceID_
 newtype DeviceID = DeviceID {_deviceIDPtr :: Ptr DeviceID_}
 deviceIDPtr :: DeviceID -> Ptr ()
 deviceIDPtr (DeviceID p) = castPtr p
+
+data PlatformID_
+newtype PlatformID = PlatformID {_platformIDPtr :: Ptr PlatformID_}
+platformIDPtr :: PlatformID -> Ptr ()
+platformIDPtr (PlatformID p) = castPtr p
 
 ------------
 data Context_
@@ -205,3 +210,11 @@ getArrayN numEntries getInfo = allocaArray numEntries $ \p -> do
         peekArray numEntries p
   where
     numBytes = numEntries * sizeOf (undefined :: a)
+
+-- TODO: more objects should use this.
+getObjArray :: GetInfoFunc -> IO [Ptr a]
+getObjArray getInfo = do
+    n <- getInfo 0 nullPtr
+    allocaArray n $ \ps -> do
+        getInfo n (castPtr ps)
+        peekArray n ps

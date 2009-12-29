@@ -1,5 +1,13 @@
 module OpenCL.Platform(
-            -- * Getting devices
+            -- * Platforms
+            PlatformID,
+            getPlatformIDs,
+            platformProfile,
+            platformVersion,
+            platformName,
+            platformVendor,
+            platformExtensions,
+            -- * Devices
             DeviceType(..),
             DeviceID,
             getDeviceID,
@@ -71,20 +79,40 @@ import OpenCL.Helpers.Types
 import OpenCL.Platform.Foreign
 import OpenCL.CommandQueue (CommandQueueProperty(..))
 
--- TODO: platforms
+getPlatformIDs :: IO [PlatformID]
+getPlatformIDs = map PlatformID <$> getObjArray clGetPlatformIDs
+
+platformProfile :: PlatformID -> String
+platformProfile p = getPureProp $ getPlatformInfo p CLPlatformProfile
+
+platformVersion :: PlatformID -> String
+platformVersion p = getPureProp $ getPlatformInfo p CLPlatformVersion
+
+platformName :: PlatformID -> String
+platformName p = getPureProp $ getPlatformInfo p CLPlatformName
+
+platformVendor :: PlatformID -> String
+platformVendor p = getPureProp $ getPlatformInfo p CLPlatformVendor
+
+platformExtensions :: PlatformID -> String
+platformExtensions p = getPureProp $ getPlatformInfo p CLPlatformExtensions
+
+
+
 
 getDeviceID :: DeviceType -> IO DeviceID
 getDeviceID dtype = alloca $ \p -> do
     clGetDeviceIDs nullPtr dtype 1 p
     DeviceID <$> peek p
 
-getDeviceIDs :: DeviceType -> IO [DeviceID]
-getDeviceIDs dtype = do
+getDeviceIDs :: DeviceType -> Maybe PlatformID -> IO [DeviceID]
+getDeviceIDs dtype m_platform= do
+    let platform = maybe nullPtr platformIDPtr m_platform
     -- First, query for the total number:
-    n <- clGetDeviceIDs nullPtr dtype 0 nullPtr
+    n <- clGetDeviceIDs platform dtype 0 nullPtr
     -- Now, get this list of all devices:
     allocaArray n $ \p -> do
-    n' <- clGetDeviceIDs nullPtr dtype n p
+    n' <- clGetDeviceIDs platform dtype n p
     peekArray n' p >>= return . map DeviceID
 
 -- TODO: Orphan instance...
