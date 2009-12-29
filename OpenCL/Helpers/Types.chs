@@ -216,5 +216,5 @@ getObjArray :: GetInfoFunc -> IO [Ptr a]
 getObjArray getInfo = do
     n <- getInfo 0 nullPtr
     allocaArray n $ \ps -> do
-        getInfo n (castPtr ps)
-        peekArray n ps
+        n' <- getInfo n (castPtr ps)
+        peekArray n' ps

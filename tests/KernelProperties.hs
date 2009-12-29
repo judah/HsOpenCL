@@ -50,5 +50,5 @@ printKernelInfo k = do
     m :: Buffer Float <- createBuffer (kernelContext k)
                                 MemReadWrite NoHostPtr 1024
     getKernelLocalMemSize k dev >>= print
-    setKernelMemArg k 0 m
+    setKernelArg k 0 m
     putStrLn ""

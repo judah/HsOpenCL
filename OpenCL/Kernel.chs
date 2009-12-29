@@ -40,18 +40,16 @@ foreign import ccall "&" clReleaseKernel :: Releaser Kernel_
 {#fun clCreateKernelsInProgram
   { withProgram* `Program'
   , `Int'
-  , id `Ptr (Ptr ())'
+  , castPtr `Ptr ()'
   , alloca- `Int' peekIntConv*
   } -> `Int' checkSuccess*-
 #}
 
 
 createKernelsInProgram :: Program -> IO [Kernel]
-createKernelsInProgram prog = do
-    n <- clCreateKernelsInProgram prog 0 nullPtr
-    allocaArray n $ \p -> do
-    clCreateKernelsInProgram prog n p
-    peekArray n p >>= mapM newKernel
+createKernelsInProgram prog =
+    getObjArray (clCreateKernelsInProgram prog)
+        >>= mapM newKernel
 
 {#fun clSetKernelArg as clSetKernelArg
   { withKernel* `Kernel'

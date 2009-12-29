@@ -56,7 +56,7 @@ allNames = [
             ,'deviceProfile
             ,'deviceVersion
             ,'deviceExtensions
-            -- ,'devicePlatform
+            ,'devicePlatform
             ]
 
 genPropList :: ExpQ

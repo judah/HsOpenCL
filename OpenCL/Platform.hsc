@@ -65,7 +65,7 @@ module OpenCL.Platform(
             deviceProfile,
             deviceVersion,
             deviceExtensions,
-            -- devicePlatform,
+            devicePlatform,
             ) where
 
 #include <OpenCL/OpenCL.h>
@@ -97,23 +97,22 @@ platformVendor p = getPureProp $ getPlatformInfo p CLPlatformVendor
 platformExtensions :: PlatformID -> String
 platformExtensions p = getPureProp $ getPlatformInfo p CLPlatformExtensions
 
+instance Show PlatformID where
+    show p = "<" ++ platformName p ++ ">"
 
 
 
 getDeviceID :: DeviceType -> IO DeviceID
 getDeviceID dtype = alloca $ \p -> do
     clGetDeviceIDs nullPtr dtype 1 p
-    DeviceID <$> peek p
+    DeviceID <$> peek (castPtr p)
 
 getDeviceIDs :: DeviceType -> Maybe PlatformID -> IO [DeviceID]
 getDeviceIDs dtype m_platform= do
     let platform = maybe nullPtr platformIDPtr m_platform
     -- First, query for the total number:
-    n <- clGetDeviceIDs platform dtype 0 nullPtr
-    -- Now, get this list of all devices:
-    allocaArray n $ \p -> do
-    n' <- clGetDeviceIDs platform dtype n p
-    peekArray n' p >>= return . map DeviceID
+    let clGetDeviceIDs' plat d n p = clGetDeviceIDs plat d n (castPtr p)
+    map (DeviceID . castPtr) <$> getObjArray (clGetDeviceIDs' platform dtype)
 
 -- TODO: Orphan instance...
 instance Show DeviceID where
@@ -291,7 +290,7 @@ deviceLocalMemType = deviceInfo (#const CL_DEVICE_LOCAL_MEM_TYPE)
 
 deviceGlobalMemCacheType :: DeviceID -> CLDeviceGlobabMemCacheType
 deviceGlobalMemCacheType = deviceInfo (#const CL_DEVICE_GLOBAL_MEM_CACHE_TYPE)
-
-devicePlatform :: DeviceID -> CLPlatformID
-devicePlatform = deviceInfo (#const CL_DEVICE_PLATFORM)
 -}
+
+devicePlatform :: DeviceID -> PlatformID
+devicePlatform = PlatformID . castPtr . deviceInfo (#const CL_DEVICE_PLATFORM)
