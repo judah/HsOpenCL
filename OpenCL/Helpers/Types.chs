@@ -80,6 +80,18 @@ newtype Program = Program (ForeignPtr Program_)
 withProgram :: Program -> (Ptr () -> IO a) -> IO a
 withProgram (Program p) f = withForeignPtr p $ f . castPtr
 
+newProgram = newData Program clReleaseProgram
+retainedProgram :: Ptr () -> IO Program
+retainedProgram p = clRetainProgram p >> newProgram p
+
+{#fun clRetainProgram
+  { id `Ptr ()'
+  } -> `Int' checkSuccess*-
+#}
+
+foreign import ccall "&" clReleaseProgram :: Releaser Program_
+newCLProgram = newData Program clReleaseProgram
+
 -- Note: cl_mem's aren't retained when they're set as kernel arguments.
 -- Rather, they're only retained while the kernel is running, and released
 -- once it's finished.

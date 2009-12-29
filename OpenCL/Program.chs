@@ -32,13 +32,8 @@ import Data.ByteString.Internal (fromForeignPtr, mallocByteString)
   , castPtr `Ptr CString'
   , id `Ptr CULong'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `Program' newCLProgram*
+  } -> `Program' newProgram*
 #}
-
-newCLProgram = newData Program clReleaseProgram
-
--- TODO: ignoring the return value...
-foreign import ccall "&" clReleaseProgram :: Releaser Program_
 
 withByteStringPtrs :: [ByteString]
     -> (Ptr CString -> Ptr CULong -> IO a) -> IO a
