@@ -16,10 +16,11 @@ myprog = [$clProg|
 __kernel void
 add(__global float *a,
     __global float *b,
+    float c,
     __global float *answer)
 {
     int gid = get_global_id(0);
-    answer[gid] = a[gid] * b[gid];
+    answer[gid] = a[gid] + c*b[gid];
 }
 |]
 
@@ -56,9 +57,11 @@ main = do
     finish queue
     putStrLn "Finished copying to buffers."
     -- Kernel arguments
-    setKernelMemArg kernel 0 aMem
-    setKernelMemArg kernel 1 bMem
-    setKernelMemArg kernel 2 ansMem
+    setKernelArg kernel 0 aMem
+    setKernelArg kernel 1 bMem
+    setKernelArg kernel 2 $ Scalar (5 :: Float)
+    setKernelArg kernel 3 ansMem
+    -- setKernelArg kernel 3 (Scalar (5::Float))
     putStrLn "Args set."
     eKernel <- enqueueNDRangeKernel queue kernel [size] Nothing []
     putStrLn "Running..."

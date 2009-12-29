@@ -8,7 +8,7 @@ module OpenCL.Simple(
             )
              where
 
-import OpenCL
+import OpenCL hiding (KernelArg)
 import Data.Array.CArray
 import Data.Array.IOCArray
 import Data.Array.CArray.Base(unsafeFreezeIOCArray, IOCArray(..))
@@ -104,7 +104,7 @@ runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     size <- getCommonSize args
     mems <- mapM (bufferArg cxt size) argPtrs
     finish queue
-    zipWithM_ (setKernelMemArg kernel) [0..] mems
+    zipWithM_ (setKernelArg kernel) [0..] mems
     enqueueNDRangeKernel queue kernel [size] Nothing []
     finish queue
     zipWithM_ (copyMutableArg queue size) mems argPtrs

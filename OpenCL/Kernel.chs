@@ -2,8 +2,12 @@ module OpenCL.Kernel(
                 Kernel,
                 createKernel,
                 createKernelsInProgram,
-                setKernelMemArg,
                 -- * Tasks
+                -- ** Arguments
+                KernelArg(),
+                setKernelArg,
+                Scalar(..),
+                -- ** Running kernels
                 enqueueNDRangeKernel,
                 enqueueTask,
                 -- * Queries
@@ -22,7 +26,6 @@ import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
 import OpenCL.Platform(Size,ULong)
-
 
 {#fun clCreateKernel as createKernel
   { withProgram* `Program'
@@ -58,11 +61,20 @@ createKernelsInProgram prog = do
   } -> `Int' checkSuccess-
 #}
 
--- TODO: what for kernel args?
--- What's the right API?
-setKernelMemArg :: Kernel -> Int -> Buffer a -> IO ()
-setKernelMemArg kernel arg mem = withBuffer mem $ \p -> with p $
-        clSetKernelArg kernel arg {#sizeof cl_mem#}
+-- API TODO
+class KernelArg a where
+    withKernelArg :: a -> (Int -> Ptr () -> IO ()) -> IO ()
+
+instance KernelArg (Buffer a) where
+    withKernelArg b f = withBuffer b $ \p -> withKernelArg (Scalar p) f
+
+-- newtype eliminates need for UndecidableInstances
+newtype Scalar a = Scalar a
+instance Storable a => KernelArg (Scalar a) where
+    withKernelArg (Scalar a) f = with a $ \p -> f (sizeOf a) (castPtr p)
+
+setKernelArg :: KernelArg a => Kernel -> Int -> a -> IO ()
+setKernelArg kernel n x = withKernelArg x $ clSetKernelArg kernel n
 
 {#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel
   { withCommandQueue* `CommandQueue'
