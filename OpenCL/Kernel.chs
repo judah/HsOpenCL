@@ -7,6 +7,10 @@ module OpenCL.Kernel(
                 KernelArg(),
                 setKernelArg,
                 Scalar(..),
+                Local(..),
+                -- *** Setting all arguments at once
+                setKernelArgs,
+                ArgList(..),
                 -- ** Running kernels
                 enqueueNDRangeKernel,
                 enqueueTask,
@@ -26,6 +30,7 @@ import OpenCL.Helpers.Types
 import OpenCL.Helpers.C2HS
 import OpenCL.Error
 import OpenCL.Platform(Size,ULong)
+import Control.Monad
 
 {#fun clCreateKernel as createKernel
   { withProgram* `Program'
@@ -71,8 +76,23 @@ newtype Scalar a = Scalar a
 instance Storable a => KernelArg (Scalar a) where
     withKernelArg (Scalar a) f = with a $ \p -> f (sizeOf a) (castPtr p)
 
+data Local a = Local Int
+
+instance Storable a => KernelArg (Local a) where
+    withKernelArg (Local n) f = f (sizeOf (undefined :: a)*n) nullPtr
+
 setKernelArg :: KernelArg a => Kernel -> Int -> a -> IO ()
 setKernelArg kernel n x = withKernelArg x $ clSetKernelArg kernel n
+
+infixr 5 :&
+data ArgList = KNil | forall a . KernelArg a => a :& ArgList
+
+setKernelArgs :: Kernel -> ArgList -> IO ()
+setKernelArgs k = loop 0
+  where
+    loop _ KNil = return ()
+    loop n (x:&xs) = setKernelArg k n x >> loop (n+1) xs
+
 
 {#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel
   { withCommandQueue* `CommandQueue'
