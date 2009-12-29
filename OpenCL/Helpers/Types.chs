@@ -69,12 +69,6 @@ retainedContextInfo child p = withForeignPtr child $ \_ -> do
     newContext p
 ------------
 
-promote :: (a -> (b -> IO c) -> IO c) -> [a] -> ([b] -> IO c) -> IO c
-promote withA = loop
-  where
-    loop [] f = f []
-    loop (x:xs) f = loop xs $ \ys -> withA x $ \y -> f (y:ys)
-
 data CommandQueue_
 newtype CommandQueue = CommandQueue (ForeignPtr CommandQueue_)
 withCommandQueue :: CommandQueue -> (Ptr () -> IO a) -> IO a
@@ -126,7 +120,7 @@ withEvent (Event p) f = withForeignPtr p $ f . castPtr
 
 withEvents :: [Event] -> ((CUInt, Ptr (Ptr ())) -> IO a) -> IO a
 withEvents [] g = g (0,nullPtr) -- required by OpenCL spec
-withEvents es g = promote withEvent es $ \ps ->
+withEvents es g = withMany withEvent es $ \ps ->
                     withArrayLen ps $ \len p_ps -> g (toEnum len, p_ps)
 
 newEvent :: Ptr (Ptr ()) -> IO Event

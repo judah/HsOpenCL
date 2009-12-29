@@ -37,7 +37,7 @@ import Data.ByteString.Internal (fromForeignPtr, mallocByteString)
 
 withByteStringPtrs :: [ByteString]
     -> (Ptr CString -> Ptr CULong -> IO a) -> IO a
-withByteStringPtrs bs f = promote unsafeUseAsCStringLen bs $ \cs -> do
+withByteStringPtrs bs f = withMany unsafeUseAsCStringLen bs $ \cs -> do
     let (cstrs, strLens) = unzip cs
     withArray cstrs $ \cstrP -> do
     withArray (map toEnum strLens) $ \lensP -> do
@@ -46,7 +46,7 @@ withByteStringPtrs bs f = promote unsafeUseAsCStringLen bs $ \cs -> do
 createN :: [Int] -> (Ptr CString -> IO ()) -> IO [ByteString]
 createN sizes f = do
     fps <- mapM mallocByteString sizes
-    promote withForeignPtr fps $ \cstrs -> withArray cstrs (f . castPtr)
+    withMany withForeignPtr fps $ \cstrs -> withArray cstrs (f . castPtr)
     return $ zipWith (flip fromForeignPtr 0) fps sizes
 
 createProgramWithSource :: Context -> [ByteString] -> IO Program
