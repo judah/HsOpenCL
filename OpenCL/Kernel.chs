@@ -9,8 +9,9 @@ module OpenCL.Kernel(
                 Scalar(..),
                 Local(..),
                 -- *** Setting all arguments at once
+                SomeArg(..),
+                (&:),
                 setKernelArgs,
-                ArgList(..),
                 -- ** Running kernels
                 NDRange,
                 enqueueNDRangeKernel,
@@ -66,6 +67,7 @@ createKernelsInProgram prog =
 #}
 
 -- API TODO
+-- note doing withArg is silly since memobjs need manual release...
 class KernelArg a where
     withKernelArg :: a -> (Int -> Ptr () -> IO ()) -> IO ()
 
@@ -85,14 +87,16 @@ instance Storable a => KernelArg (Local a) where
 setKernelArg :: KernelArg a => Kernel -> Int -> a -> IO ()
 setKernelArg kernel n x = withKernelArg x $ clSetKernelArg kernel n
 
-infixr 5 :&
-data ArgList = KNil | forall a . KernelArg a => a :& ArgList
+data SomeArg = forall a . KernelArg a => SomeArg a
 
-setKernelArgs :: Kernel -> ArgList -> IO ()
-setKernelArgs k = loop 0
+setKernelArgs :: Kernel -> [SomeArg]-> IO ()
+setKernelArgs k = zipWithM_ setter [0..]
   where
-    loop _ KNil = return ()
-    loop n (x:&xs) = setKernelArg k n x >> loop (n+1) xs
+    setter n (SomeArg x) = setKernelArg k n x
+
+infixr 6 &:
+(&:) :: KernelArg a => a -> [SomeArg] -> [SomeArg]
+x &: xs = SomeArg x : xs
 
 
 {#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel

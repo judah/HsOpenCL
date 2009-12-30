@@ -57,8 +57,8 @@ main = do
     finish queue
     putStrLn "Finished copying to buffers."
     -- Kernel arguments
-    setKernelArgs kernel $ aMem :& bMem :& Scalar (5::Float)
-                                :& ansMem :& KNil
+    setKernelArgs kernel $ aMem &: bMem &: Scalar (5::Float)
+                                &: ansMem &: []
     putStrLn "Args set."
     eKernel <- enqueueNDRangeKernel queue kernel size Nothing []
     putStrLn "Running..."
