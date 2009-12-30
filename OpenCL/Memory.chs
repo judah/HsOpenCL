@@ -1,13 +1,16 @@
 module OpenCL.Memory(
                 -- * Memory objects
                 MemObject(),
-                Buffer,
-                castBuffer,
-                createBuffer,
                 MemAccessFlag(..),
                 MemInitFlag(..),
-                retainMemObject,
+                -- ** Resource management
                 releaseMemObject,
+                retainMemObject,
+                -- * Buffers
+                Buffer,
+                castBuffer,
+                newBuffer,
+                withBuffer,
                 -- * Reading, writing and copying buffers
                 IsBlocking(..),
                 enqueueReadBuffer,
@@ -26,7 +29,7 @@ import OpenCL.Internal.C2HS
 import OpenCL.Error
 import Data.Maybe
 import Control.Applicative
-
+import Control.Exception
 -- TODO
 -- Events/blocking
 --
@@ -54,11 +57,11 @@ enum CLMemFlags {
   , `Int'
   , castPtr `Ptr a'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `Buffer a' newBuffer
+  } -> `Buffer a' newBufferObj
 #}
 
-newBuffer :: Ptr () -> Buffer a
-newBuffer = Buffer . castPtr
+newBufferObj :: Ptr () -> Buffer a
+newBufferObj = Buffer . castPtr
 
 data MemAccessFlag = MemReadWrite | MemWriteOnly | MemReadOnly
                     deriving (Show,Eq)
@@ -69,11 +72,11 @@ data MemInitFlag a = NoHostPtr | UseHostPtr (Ptr a)
                         | CopyAllocHostPtr (Ptr a)
                     deriving (Show,Eq)
 
-createBuffer :: forall a . Storable a
+newBuffer :: forall a . Storable a
         => Context -> MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
             -> IO (Buffer a)
-createBuffer context memAccess hostPtr size
+newBuffer context memAccess hostPtr size
     = clCreateBuffer context flags (size * eltSize) p'
   where 
     flags = memFlag : hostPtrFlags
@@ -90,6 +93,16 @@ createBuffer context memAccess hostPtr size
             MemWriteOnly -> CLMemWriteOnly_
             MemReadOnly -> CLMemReadOnly_
 
+withBuffer :: Storable a => Context -> MemAccessFlag -> MemInitFlag a
+            -> Int -- ^ The number of elements in the buffer.
+            -> (Buffer a -> IO b) -> IO b
+withBuffer context memAccess hostPtr size f = bracket
+        (do
+            b <- newBuffer context memAccess hostPtr size
+            retainMemObject b
+            return b)
+        releaseMemObject
+        f
 
 data IsBlocking = Blocking | NonBlocking
                     deriving (Show,Eq)
@@ -100,7 +113,7 @@ blockingFlag NonBlocking = 0
 
 {#fun clEnqueueReadBuffer
   { withCommandQueue* `CommandQueue'
-  , withBuffer* `Buffer a'
+  , withBufferPtr* `Buffer a'
   , blockingFlag `IsBlocking'
   , `Int'
   , `Int'
@@ -122,7 +135,7 @@ enqueueReadBuffer queue mem block offset size p
 
 {#fun clEnqueueWriteBuffer
   { withCommandQueue* `CommandQueue'
-  , withBuffer* `Buffer a'
+  , withBufferPtr* `Buffer a'
   , blockingFlag `IsBlocking'
   , `Int'
   , `Int'
@@ -144,8 +157,8 @@ enqueueWriteBuffer queue mem blocking offset size p
 
 {#fun clEnqueueCopyBuffer
   { withCommandQueue* `CommandQueue'
-  , withBuffer* `Buffer a'
-  , withBuffer* `Buffer a'
+  , withBufferPtr* `Buffer a'
+  , withBufferPtr* `Buffer a'
   , `Int'
   , `Int'
   , `Int'
@@ -171,20 +184,19 @@ enqueueCopyBuffer queue source dest srcOff destOff size
 
 {#fun clRetainMemObject as retainMemObject
   `MemObject m' =>
-  { memObjectPtr `m'
+  { withMemObject* `m'
   } -> `Int' checkSuccess-
 #}
 
 {#fun clReleaseMemObject as releaseMemObject
   `MemObject m' =>
-  { memObjectPtr `m'
+  { withMemObject* `m'
   } -> `Int' checkSuccess-
 #}
 
-
 {#fun clGetMemObjectInfo as getMemInfo
   `MemObject m' =>
-  { memObjectPtr `m'
+  { withMemObject* `m'
   , cEnum `CLMemInfo'
   , `Int'
   , id `Ptr ()'
@@ -249,7 +261,7 @@ getMemReferenceCount m
 -- but this API shouldn't add too much to what's already in OpenCL.
 
 class MemObject m where
-    memObjectPtr :: m -> Ptr ()
+    withMemObject :: m -> (Ptr () -> IO a) -> IO a
 
 instance MemObject (Buffer a) where
-    memObjectPtr (Buffer p) = castPtr p
+    withMemObject = withBufferPtr

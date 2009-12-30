@@ -142,6 +142,6 @@ instance (Ix i, Storable e) => KernelArg (IOCArray i e) where
 
 bracketBuffer :: Storable e => SimpleProgram -> MemAccessFlag -> MemInitFlag e -> Int
                     -> (Buffer e -> IO a) -> (Buffer e -> IO b) -> IO b
-bracketBuffer prog access init size end =
-    bracket (createBuffer (simpleCxt prog) access init size)
-        (\m -> end m >> releaseMemObject m)
+bracketBuffer prog access init size end f
+    = withBuffer (simpleCxt prog) access init size
+        $ \m -> do {x <- f m; end m; return x}

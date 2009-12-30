@@ -48,11 +48,11 @@ main = do
     a :: Ptr Float <- newArray [0..n-1]
     b :: Ptr Float <- newArray [n-1,n-2..0]
     results :: Ptr Float <- newArray $ replicate size 0
-    aMem <- createBuffer context MemReadOnly NoHostPtr size
+    withBuffer context MemReadOnly NoHostPtr size $ \aMem -> do
     enqueueWriteBuffer queue aMem NonBlocking 0 size a []
-    bMem <- createBuffer context MemReadOnly NoHostPtr size
+    withBuffer context MemReadOnly NoHostPtr size $ \bMem -> do
     enqueueWriteBuffer queue bMem NonBlocking 0 size b []
-    ansMem <- createBuffer context MemReadWrite NoHostPtr size
+    withBuffer context MemReadWrite NoHostPtr size $ \ansMem -> do
     putStrLn "Allocated buffers."
     finish queue
     putStrLn "Finished copying to buffers."

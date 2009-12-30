@@ -105,8 +105,8 @@ newCLProgram = newData Program clReleaseProgram
 -- in step 4.  
 data Buffer_
 newtype Buffer a = Buffer (Ptr Buffer_)
-withBuffer :: Buffer a -> (Ptr () -> IO b) -> IO b
-withBuffer (Buffer p) f = f $ castPtr p
+withBufferPtr :: Buffer a -> (Ptr () -> IO b) -> IO b
+withBufferPtr (Buffer p) = ($ castPtr p)
 
 data Kernel_
 newtype Kernel = Kernel (ForeignPtr Kernel_)

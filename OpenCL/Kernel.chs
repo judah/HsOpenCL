@@ -72,7 +72,7 @@ class KernelArg a where
     withKernelArg :: a -> (Int -> Ptr () -> IO ()) -> IO ()
 
 instance KernelArg (Buffer a) where
-    withKernelArg b f = withBuffer b $ \p -> withKernelArg (Scalar p) f
+    withKernelArg b f = withBufferPtr b $ \p -> withKernelArg (Scalar p) f
 
 -- newtype eliminates need for UndecidableInstances
 newtype Scalar a = Scalar a
