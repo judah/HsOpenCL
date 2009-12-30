@@ -126,6 +126,9 @@ enqueueNDRangeKernel queue kernel globalWorkSize localWorkSize events
 class NDRange d where
     rangeDims :: d -> [CULong]
 
+instance NDRange () where
+    rangeDims () = [1]
+
 instance NDRange Int where
     rangeDims n = [fromIntegral n]
 
