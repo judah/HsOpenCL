@@ -1,17 +1,25 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, QuasiQuotes #-}
 module Main where
 
 import OpenCL.Simple
+import MultiLine
 
 import Data.Array.CArray
 import Data.Array.IOCArray
 
 import qualified Data.ByteString as B
 
+add = [$clProg|
+    __kernel void add(__global float *a,
+	            __global float *b,
+	            __global float *answer)
+    {
+	int gid = get_global_id(0);
+	answer[gid] = a[gid] + b[gid];
+    }|]
 
 main = do
-    contents <- B.readFile "test_prog.cl"
-    prog <- newSimpleProgram DeviceTypeGPU [contents]
+    prog <- newSimpleProgram DeviceTypeGPU [add]
     putStrLn "Built!"
     let size = 32
     let n = toEnum size
