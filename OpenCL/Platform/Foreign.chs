@@ -3,9 +3,9 @@ module OpenCL.Platform.Foreign where
 #include <OpenCL/OpenCL.h>
 
 
-import OpenCL.Helpers.C2HS
+import OpenCL.Internal.C2HS
 import OpenCL.Error
-import OpenCL.Helpers.Types
+import OpenCL.Internal.Types
 
 import Control.Applicative
 

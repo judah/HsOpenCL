@@ -8,8 +8,8 @@ module OpenCL.Context(
 
 import OpenCL.Error
 #include <OpenCL/OpenCL.h>
-import OpenCL.Helpers.Types
-import OpenCL.Helpers.C2HS
+import OpenCL.Internal.Types
+import OpenCL.Internal.C2HS
 import OpenCL.Platform.Foreign
 
 import Control.Applicative

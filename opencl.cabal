@@ -22,8 +22,8 @@ exposed-modules:
     OpenCL
     OpenCL.Simple
 other-modules:
-    OpenCL.Helpers.C2HS
-    OpenCL.Helpers.Types
+    OpenCL.Internal.C2HS
+    OpenCL.Internal.Types
     OpenCL.Platform.Foreign
 extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
             ScopedTypeVariables, GADTs, 

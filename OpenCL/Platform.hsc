@@ -73,9 +73,9 @@ module OpenCL.Platform(
 import Control.Applicative
 import Data.Bits
 
-import OpenCL.Helpers.C2HS
+import OpenCL.Internal.C2HS
 import OpenCL.Error
-import OpenCL.Helpers.Types
+import OpenCL.Internal.Types
 import OpenCL.Platform.Foreign
 import OpenCL.CommandQueue (CommandQueueProperty(..))
 

@@ -21,8 +21,8 @@ module OpenCL.Memory(
                 ) where
 
 #include <OpenCL/OpenCL.h>
-import OpenCL.Helpers.Types
-import OpenCL.Helpers.C2HS
+import OpenCL.Internal.Types
+import OpenCL.Internal.C2HS
 import OpenCL.Error
 import Data.Maybe
 import Control.Applicative

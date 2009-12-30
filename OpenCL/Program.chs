@@ -16,8 +16,8 @@ module OpenCL.Program(Program,
                 ) where
 
 #include <OpenCL/OpenCL.h>
-import OpenCL.Helpers.Types
-import OpenCL.Helpers.C2HS
+import OpenCL.Internal.Types
+import OpenCL.Internal.C2HS
 import OpenCL.Error
 
 import Control.Applicative
