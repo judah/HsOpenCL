@@ -67,7 +67,6 @@ main = do
     statEvent "enqueueNDRangeKernel" eKernel
     enqueueReadBuffer queue ansMem NonBlocking 0 size results []
     finish queue
-    mapM_ releaseMemObject [aMem,bMem,ansMem]
     putStrLn "Results are:"
     peekArray size results >>= print . take 10
 
