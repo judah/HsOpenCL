@@ -46,6 +46,7 @@ newtype Context = Context (ForeignPtr Context_)
 withContext :: Context -> (Ptr () -> IO a) -> IO a
 withContext (Context p) f = withForeignPtr p $ f . castPtr
 
+newContext :: Ptr () -> IO Context
 newContext = newData Context clReleaseContext
 foreign import ccall "&" clReleaseContext :: Releaser Context_
 
@@ -79,7 +80,6 @@ newtype Program = Program (ForeignPtr Program_)
 withProgram :: Program -> (Ptr () -> IO a) -> IO a
 withProgram (Program p) f = withForeignPtr p $ f . castPtr
 
-newProgram = newData Program clReleaseProgram
 retainedProgram :: Ptr () -> IO Program
 retainedProgram p = clRetainProgram p >> newProgram p
 
@@ -89,7 +89,9 @@ retainedProgram p = clRetainProgram p >> newProgram p
 #}
 
 foreign import ccall "&" clReleaseProgram :: Releaser Program_
-newCLProgram = newData Program clReleaseProgram
+
+newProgram :: Ptr () -> IO Program
+newProgram = newData Program clReleaseProgram
 
 -- Note: cl_mem's aren't retained when they're set as kernel arguments.
 -- Rather, they're only retained while the kernel is running, and released

@@ -22,7 +22,7 @@ import OpenCL.Error
 
 import Control.Applicative
 import Control.Monad
-import Data.ByteString (ByteString, packCStringLen)
+import Data.ByteString (ByteString)
 import Data.ByteString.Unsafe (unsafeUseAsCStringLen)
 import Data.ByteString.Internal (fromForeignPtr, mallocByteString)
 
@@ -61,7 +61,7 @@ createProgramWithSource context bs = withByteStringPtrs bs $ \cs lenP ->
   , castPtr `Ptr CString'
   , id `Ptr CInt' -- binary statuses
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `Program' newCLProgram*
+  } -> `Program' newProgram*
 #}
 
 -- TODO: 

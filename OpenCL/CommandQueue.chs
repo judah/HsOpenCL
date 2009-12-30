@@ -33,7 +33,6 @@ import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
 import OpenCL.Error
 
-import Control.Monad
 import Control.Applicative
 
 #c
@@ -52,6 +51,7 @@ enum CommandQueueProperty {
   } -> `CommandQueue' newCommandQueue*
 #}
 
+newCommandQueue :: Ptr () -> IO CommandQueue
 newCommandQueue = newData CommandQueue clReleaseCommandQueue
 foreign import ccall "&" clReleaseCommandQueue :: Releaser CommandQueue_
 

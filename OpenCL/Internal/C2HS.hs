@@ -43,7 +43,8 @@ module OpenCL.Internal.C2HS (
   module CForeign,
 
   -- * Composite marshalling functions
-  withCStringLenIntConv, peekCStringLenIntConv, withIntConv, withFloatConv,
+  -- withCStringLenIntConv, peekCStringLenIntConv, withIntConv, withFloatConv,
+  withIntConv, withFloatConv,
   peekIntConv, peekFloatConv, withBool, peekBool, withEnum, peekEnum,
 
   -- * Conditional results using 'Maybe'
@@ -63,7 +64,7 @@ import Foreign
 		    -- compilers that export them
 import CForeign
 
-import Monad        (when, liftM)
+import Monad        (liftM)
 
 
 -- Composite marshalling functions
@@ -71,8 +72,8 @@ import Monad        (when, liftM)
 
 -- Strings with explicit length
 --
-withCStringLenIntConv s f    = withCStringLen s $ \(p, n) -> f (p, cIntConv n)
-peekCStringLenIntConv (s, n) = peekCStringLen (s, cIntConv n)
+-- withCStringLenIntConv s f    = withCStringLen s $ \(p, n) -> f (p, cIntConv n)
+-- peekCStringLenIntConv (s, n) = peekCStringLen (s, cIntConv n)
 
 -- Marshalling of numerals
 --
@@ -113,6 +114,7 @@ peekEnum :: (Enum a, Integral b, Storable b) => Ptr b -> IO a
 peekEnum  = liftM cToEnum . peek
 
 
+{- Disabled b/c of orphan warning:
 -- Storing of 'Maybe' values
 -- -------------------------
 
@@ -132,6 +134,7 @@ instance Storable a => Storable (Maybe a) where
 			Just v' -> new v'
                poke (castPtr p) ptr
 
+-}
 
 -- Conditional results using 'Maybe'
 -- ---------------------------------

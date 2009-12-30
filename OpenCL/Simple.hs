@@ -16,7 +16,6 @@ import System.IO
 import Control.Exception
 import Foreign
 import Control.Applicative
-import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.Maybe
@@ -84,10 +83,10 @@ runKernel kernel prog params = case commonSize (map snd params) of
 commonSize :: [Maybe Int] -> Maybe Int
 commonSize xs = case catMaybes xs of
                     [] -> Nothing
-                    (x:xs)
-                        | any (/=x) xs
+                    (y:ys)
+                        | any (/=y) ys
                             -> error "Kernel arguments are not all the same size."
-                        | otherwise -> Just x
+                        | otherwise -> Just y
 
 
 instance (Storable e) =>  KernelFunc (IO (CArray Int e)) where
