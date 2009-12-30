@@ -7,6 +7,41 @@ import Language.Haskell.TH.Quote
 import Language.Haskell.TH.Syntax
 import Language.Haskell.TH.Lib
 
+import Data.Char
+import System.IO.Unsafe
+import OpenCL.Simple
+
 clProg :: QuasiQuoter
 clProg = QuasiQuoter (\s -> appE (varE 'B.pack) (litE $ stringL s))
             (litP . stringL)
+
+clKern :: QuasiQuoter
+clKern = QuasiQuoter (\s -> (litE $ stringL s))
+            (litP . stringL)
+
+-- TODO: We can go even further:
+-- parse the __kernel line, and turn it into a type.
+-- Parsing can easily give arity
+-- though we'd probably want a type class for carrays/buffers so it
+-- could be reused.
+--
+-- eventually, just use top-level syntax
+--
+-- declareKernels [$clKern|...|]
+-- which parses the string, finds the __kernel functions and turns each one
+-- into a typed Haskell function.  If it works, it'd be pretty cool...
+
+makeKernel :: KernelFunc f => String -> String -> f
+makeKernel name body = unsafePerformIO $ do
+            prog <- newSimpleProgram DeviceTypeGPU [B.pack body]
+            getKernelFunc prog name
+
+declareKernel :: String -> TypeQ -> String -> Q [Dec]
+declareKernel name_str ty text = sequence
+    [sigD name ty
+    , funD name [clause [] (normalB [|makeKernel $(stringE name_str)
+                                        $(stringE text)|]) []]
+    ]
+  where
+    name = mkName name_str
+
