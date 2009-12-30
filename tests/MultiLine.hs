@@ -27,9 +27,13 @@ clKern = QuasiQuoter (\s -> (litE $ stringL s))
 --
 -- eventually, just use top-level syntax
 --
--- declareKernels [$clKern|...|]
--- which parses the string, finds the __kernel functions and turns each one
--- into a typed Haskell function.  If it works, it'd be pretty cool...
+-- > declareKernels [$clKern|...|]
+-- and also
+-- > declareKernelsFromFile "foo.cl"
+-- which parses the string from either the quasiquote or the file,
+-- finds the __kernel functions within, and turns each one
+-- into a typed Haskell function.  If it worked, it'd be pretty cool...
+--
 
 makeKernel :: KernelFunc f => String -> String -> f
 makeKernel name body = unsafePerformIO $ do
