@@ -97,12 +97,9 @@ instance (Storable e) =>  KernelFunc (IO (CArray Int e)) where
         Just size -> do
             a <- newArray_ (0,size-1)
             withIOCArray a $ \p -> do
-            bracket
-                (createBuffer (simpleCxt prog) MemWriteOnly NoHostPtr size)
-                (\m -> do
-                        enqueueReadBuffer (simpleQueue prog) m Blocking
-                                        0 size p []
-                        releaseMemObject m)
+            bracketBuffer prog MemWriteOnly NoHostPtr size
+                (\m -> enqueueReadBuffer (simpleQueue prog) m Blocking
+                                0 size p [])
                 $ \m -> (applyKFunc kernel prog ((SomeArg m, Just size):ps)
                                     :: IO ())
             unsafeFreezeIOCArray a
@@ -129,23 +126,22 @@ instance Storable a => KernelArg (Buffer a) where
 instance (Ix i, Storable e) => KernelArg (CArray i e) where
     withArg prog a = \f -> withCArray a $ \p -> do
                             let size = rangeSize (bounds a)
-                            bracket
-                                (createBuffer (simpleCxt prog) MemReadOnly
-                                    (CopyHostPtr p) size)
-                                releaseMemObject
+                            bracketBuffer prog MemReadOnly (CopyHostPtr p) size
+                                return
                                 $ \m -> f (SomeArg m, Just size)
 
 instance (Ix i, Storable e) => KernelArg (IOCArray i e) where
     withArg prog a = \f ->
         withIOCArray a $ \p -> do
             size <- rangeSize <$> getBounds a
-            bracket
-                (createBuffer (simpleCxt prog) MemReadWrite
-                        (CopyHostPtr p) size)
-                (\m -> do
-                    enqueueReadBuffer (simpleQueue prog) m Blocking
-                            0 size p []
-                    releaseMemObject m)
+            bracketBuffer prog MemReadWrite (CopyHostPtr p) size
+                (\m -> enqueueReadBuffer (simpleQueue prog) m Blocking
+                            0 size p [])
                 $ \m -> f (SomeArg m, Just size)
 
 
+bracketBuffer :: Storable e => SimpleProgram -> MemAccessFlag -> MemInitFlag e -> Int
+                    -> (Buffer e -> IO a) -> (Buffer e -> IO b) -> IO b
+bracketBuffer prog access init size end =
+    bracket (createBuffer (simpleCxt prog) access init size)
+        (\m -> end m >> releaseMemObject m)
