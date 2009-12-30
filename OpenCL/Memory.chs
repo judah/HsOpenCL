@@ -97,10 +97,7 @@ withBuffer :: Storable a => Context -> MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
             -> (Buffer a -> IO b) -> IO b
 withBuffer context memAccess hostPtr size f = bracket
-        (do
-            b <- newBuffer context memAccess hostPtr size
-            retainMemObject b
-            return b)
+        (newBuffer context memAccess hostPtr size)
         releaseMemObject
         f
 
