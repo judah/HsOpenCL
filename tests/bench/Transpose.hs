@@ -44,8 +44,8 @@ testKernel p idata odata k = do
     -- they do some sort of rounding up for the global size,
     -- but I think with the above dimensions we're OK.
     
-    let globalSize = [sizeX,sizeY]
-    let localSize = Just [blockDim,blockDim]
+    let globalSize = (sizeX,sizeY)
+    let localSize = Just (blockDim,blockDim)
     let run = enqueueNDRangeKernel (simpleQueue p) k globalSize localSize []
     
     return $ bench ("kernel-" ++ kernelFunctionName k)

@@ -12,6 +12,7 @@ module OpenCL.Kernel(
                 setKernelArgs,
                 ArgList(..),
                 -- ** Running kernels
+                NDRange,
                 enqueueNDRangeKernel,
                 enqueueTask,
                 -- * Queries
@@ -106,21 +107,35 @@ setKernelArgs k = loop 0
   } -> `Int' checkSuccess-
 #}
 
-enqueueNDRangeKernel :: CommandQueue -> Kernel -> [Int] -> Maybe [Int]
-                        -> [Event] -> IO Event
+enqueueNDRangeKernel :: NDRange d => CommandQueue -> Kernel
+                        -> d -> Maybe d -> [Event] -> IO Event
 enqueueNDRangeKernel queue kernel globalWorkSize localWorkSize events
-    = withArrayLen (map toEnum globalWorkSize) $ \dim globalSizes ->
+    = withArrayLen (rangeDims globalWorkSize) $ \dim globalSizes ->
         withLocalSizeArray dim $ \localSizes ->
             clEnqueueNDRangeKernel queue kernel dim nullPtr
                     globalSizes localSizes events
   where
     withLocalSizeArray dim = case localWorkSize of
         Nothing -> ($ nullPtr)
-        Just sizes
-            | length sizes /= dim
-                -> error $ "enqueueNDRangeKernel: global and local sizes "
-                            ++ "are not of the same dimensions"
-            | otherwise -> withArray (map toEnum sizes)
+        Just sizes -> withArray $ rangeDims sizes
+
+class NDRange d where
+    rangeDims :: d -> [CULong]
+
+instance NDRange Int where
+    rangeDims n = [fromIntegral n]
+
+instance NDRange CSize where
+    rangeDims n = [fromIntegral n]
+
+instance Integral a => NDRange (a,a) where
+    rangeDims (x,y) = [fromIntegral x, fromIntegral y]
+
+instance Integral a => NDRange (a,a,a) where
+    rangeDims (x,y,z) = [fromIntegral x, fromIntegral y, fromIntegral z]
+
+
+
 
 {#fun clEnqueueTask as enqueueTask
  { withCommandQueue* `CommandQueue'

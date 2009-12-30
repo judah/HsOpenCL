@@ -105,7 +105,7 @@ runKernel cxt kernel args = withArgs args $ \argPtrs -> do
     mems <- mapM (bufferArg cxt size) argPtrs
     finish queue
     zipWithM_ (setKernelArg kernel) [0..] mems
-    enqueueNDRangeKernel queue kernel [size] Nothing []
+    enqueueNDRangeKernel queue kernel size Nothing []
     finish queue
     zipWithM_ (copyMutableArg queue size) mems argPtrs
     finish queue

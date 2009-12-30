@@ -60,7 +60,7 @@ main = do
     setKernelArgs kernel $ aMem :& bMem :& Scalar (5::Float)
                                 :& ansMem :& KNil
     putStrLn "Args set."
-    eKernel <- enqueueNDRangeKernel queue kernel [size] Nothing []
+    eKernel <- enqueueNDRangeKernel queue kernel size Nothing []
     putStrLn "Running..."
     finish queue
     putStrLn "Finished running!"
