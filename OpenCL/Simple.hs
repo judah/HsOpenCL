@@ -8,7 +8,7 @@ module OpenCL.Simple(
             )
              where
 
-import OpenCL hiding (KernelArg)
+import OpenCL hiding (KernelArg, KernelFunc)
 import Data.Array.CArray
 import Data.Array.IOCArray
 import Data.Array.CArray.Base(unsafeFreezeIOCArray, IOCArray(..))
@@ -67,12 +67,12 @@ getKernelFunc prog text = do
     return $ applyKFunc kernel prog []
 
 instance KernelFunc (IO ()) where
-    applyKFunc kernel prog ps = runKernel kernel prog (reverse ps)
+    applyKFunc kernel prog ps = runKernel' kernel prog (reverse ps)
                                     >> return ()
     liftWith = id
 
-runKernel :: Kernel -> SimpleProgram -> [Param] -> IO ()
-runKernel kernel prog params = do
+runKernel' :: Kernel -> SimpleProgram -> [Param] -> IO ()
+runKernel' kernel prog params = do
     setKernelArgs kernel (map fst params)
     waitForCommand (simpleQueue prog)
         $ case commonSize (map snd params) of

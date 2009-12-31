@@ -12,6 +12,7 @@ module OpenCL.CommandQueue(
                 enqueues_,
                 waitForCommand,
                 waitForCommands,
+                commandWith,
                 -- * Querying info and properties
                 queueDevice,
                 queueContext,
@@ -229,6 +230,11 @@ waitForCommand q c = enqueue q c [] >>= waitForEvent
 
 waitForCommands :: CommandQueue -> [Command] -> IO ()
 waitForCommands q cs = mapM (\c -> enqueue q c []) cs >>= waitForEvents
+
+commandWith :: ( (a -> IO ()) -> IO ()) -> (a -> Command) -> Command
+commandWith f g = Command $ \q n es e -> f $ \x -> case g x of
+                                Command g' -> g' q n es e
+
 
 --------------------------
 

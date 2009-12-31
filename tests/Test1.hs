@@ -48,9 +48,9 @@ main = do
     withBuffer context MemReadWrite NoHostPtr size $ \ansMem -> do
     waitForCommands queue [aMem =: a, bMem =: b]
     -- Run the kernel:
-    setKernelArgs kernel $ aMem &: bMem &: Scalar (2::Float)
-                                &: ansMem &: []
-    eKernel <- enqueue queue (ndRangeKernel kernel size Nothing) []
+    eKernel <- enqueue queue (runKernel kernel size Nothing
+                                aMem bMem (2::Float) ansMem)
+                        []
     waitForEvent eKernel
     statEvent eKernel
     -- Get the result, and print it out:

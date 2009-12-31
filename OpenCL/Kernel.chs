@@ -16,6 +16,9 @@ module OpenCL.Kernel(
                 NDRange,
                 ndRangeKernel,
                 task,
+                -- *** KernelFunc
+                KernelFunc,
+                runKernel,
                 -- * Queries
                 kernelFunctionName,
                 kernelNumArgs,
@@ -32,6 +35,7 @@ import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
 import OpenCL.Error
 import OpenCL.Platform(Size,ULong)
+import OpenCL.CommandQueue (commandWith)
 import Control.Monad
 
 {#fun clCreateKernel as createKernel
@@ -72,12 +76,21 @@ class KernelArg a where
     withKernelArg :: a -> (Int -> Ptr () -> IO ()) -> IO ()
 
 instance KernelArg (Buffer a) where
+    -- buffers are set the same as a scalar pointer would be.
     withKernelArg b f = withBufferPtr b $ \p -> withKernelArg (Scalar p) f
 
 -- newtype eliminates need for UndecidableInstances
 newtype Scalar a = Scalar a
 instance Storable a => KernelArg (Scalar a) where
     withKernelArg (Scalar a) f = with a $ \p -> f (sizeOf a) (castPtr p)
+
+-- TODO: more instances, and double-check the marshalling.
+-- then, get rid of Scalar altogether.
+instance KernelArg Float where
+    withKernelArg x = withKernelArg (Scalar x)
+
+instance KernelArg Int where
+    withKernelArg x = withKernelArg (Scalar (toEnum x::CInt))
 
 data Local a = Local Int
 
@@ -113,10 +126,24 @@ x &: xs = SomeArg x : xs
 #}
 
 ndRangeKernel :: NDRange d => Kernel -> d -> Maybe d -> Command
-ndRangeKernel kernel globalWorkSize localWorkSize
-    = Command $ \queue n es e ->
-       withArrayLen (rangeDims globalWorkSize) $ \dim globalSizes ->
-        withLocalSizeArray dim $ \localSizes ->
+ndRangeKernel kernel global local
+    = Command $ runKernel' kernel global local
+
+-- TODO: check # of args with getinfo
+runKernelWithArgs :: NDRange d => Kernel -> d -> Maybe d
+                        -> [SomeArg] -> Command
+runKernelWithArgs k global local as = Command $ \q n es e -> let
+            loop _ [] = runKernel' k global local q n es e
+            loop c (SomeArg x:xs) = withKernelArg x $ \n p -> do
+                            clSetKernelArg k c n p
+                            loop (c+1) xs
+            in loop 0 as
+
+runKernel' :: NDRange d => Kernel -> d -> Maybe d
+            -> CommandQueue -> CUInt -> Ptr (Ptr ()) -> Ptr (Ptr ()) -> IO ()
+runKernel' kernel globalWorkSize localWorkSize queue n es e
+       = withArrayLen (rangeDims globalWorkSize) $ \dim globalSizes ->
+          withLocalSizeArray dim $ \localSizes ->
             clEnqueueNDRangeKernel queue kernel dim nullPtr
                     globalSizes localSizes
                     n es e
@@ -124,6 +151,8 @@ ndRangeKernel kernel globalWorkSize localWorkSize
     withLocalSizeArray dim = case localWorkSize of
         Nothing -> ($ nullPtr)
         Just sizes -> withArray $ rangeDims sizes
+
+
 
 class NDRange d where
     rangeDims :: d -> [CULong]
@@ -229,3 +258,22 @@ kernelCompileWorkGroupSize k d = unsafePerformIO $ do
 
 getKernelLocalMemSize :: Kernel -> DeviceID -> IO ULong
 getKernelLocalMemSize k d = getProp $ getWorkGroupInfo k d CLKernelLocalMemSize
+
+----------------------
+-- KernelFunc
+
+class KernelFunc f where
+    -- liftWith :: ( (b -> IO ()) -> IO ()) -> (b -> f) -> f
+    applyKFunc :: ([SomeArg] -> Command) -> [SomeArg] -> f
+
+doBefore :: IO () -> Command -> Command
+doBefore m c = commandWith (\f -> m >> f ()) (const c)
+
+instance KernelFunc Command where
+    applyKFunc run as = run (reverse as)
+
+instance (KernelArg a, KernelFunc f) => KernelFunc (a -> f) where
+    applyKFunc run as = \a -> applyKFunc run (SomeArg a:as)
+
+runKernel :: (NDRange d, KernelFunc f) => Kernel -> d -> Maybe d -> f
+runKernel  k global local = applyKFunc (runKernelWithArgs k global local) []
