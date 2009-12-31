@@ -2,7 +2,7 @@
 module Parse where
 
 import Text.Parsec
-import Text.Parsec.String
+import Text.Parsec.ByteString
 import Language.Haskell.TH
 import OpenCL
 import OpenCL.Simple
@@ -18,25 +18,38 @@ and have a function buildProg which builds the file and fills
 the records.
 -}
 
+-- Alt: use Once (one-shot)-style IO actions. --
+
 -- Bool, others; should they get extra instances?
 -- i.e. instance KernelArg (Scalar Bool) where...
 -- Alt, just do a whitelist of allowed args...
 -- yeah, that's prob. better.
 -- (then don't want Storable, rather something else?)
+
 declareKernelsFromFile :: String -> FilePath -> Q [Dec]
 declareKernelsFromFile progStr file = do
-    res <- runIO $ parseFromFile clFile file
-    case res of
+    contents <- runIO $ B.readFile file
+    declareKernels' file progStr contents
+
+declareKernels :: String -> B.ByteString -> Q [Dec]
+declareKernels progStr contents = do
+    loc <- location
+    declareKernels' (loc_filename loc ++ ": "
+                        ++ show (loc_start loc, loc_end loc))
+        progStr contents
+
+
+declareKernels' :: String -> String -> B.ByteString -> Q [Dec]
+declareKernels' source progStr contents
+    = case runParser clFile () source contents of
         Left err -> do
-            report True $ "Error parsing OpenCL file " ++ show file
-                                ++ ":\n" ++ show err
+            report True $ "Error parsing OpenCL file: " ++ show err
             return []
         Right fs -> do
-                contents <- runIO $ readFile file
                 let progName = mkName progStr
                 sequence $ concat [
                             map kernelSig fs
-                            , progDef progName contents
+                            , progDef progName (B.unpack contents)
                             , map (kernelDef progName . fst) fs
                             ]
 
