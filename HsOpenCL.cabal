@@ -26,7 +26,7 @@ other-modules:
     OpenCL.Internal.Types
     OpenCL.Platform.Foreign
 extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
-            ScopedTypeVariables, GADTs, 
+            ScopedTypeVariables, GADTs, MultiParamTypeClasses
             TypeSynonymInstances, FlexibleInstances, OverlappingInstances
             Rank2Types
 frameworks: OpenCL

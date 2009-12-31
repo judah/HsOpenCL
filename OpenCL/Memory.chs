@@ -16,9 +16,15 @@ module OpenCL.Memory(
                 readBuffer,
                 writeBuffer,
                 copyBuffer,
+                -- ** Convenience class
+                CopyTo(..),
+                BufferLike,
+                Slice(),
+                slice,
                 -- * Properties
                 memFlags,
                 memSize,
+                bufferSize,
                 memContext,
                 getMemReferenceCount,
                 ) where
@@ -182,6 +188,60 @@ copyBuffer source dest srcOff destOff size
   where eltWidth = sizeOf (undefined :: a)
 
 
+---------
+-- TODO: make all this take Integral or CSize parameters.
+class CopyTo a b where
+    (=:) :: Storable e => a e -> b e -> Command
+
+class BufferLike b where
+    asSlice :: Storable e => b e -> Slice e
+
+instance BufferLike Buffer where
+    asSlice b = Slice 0 (bufferSize b) b
+
+-- indexes are as elements.
+-- there's some unnecessary operations, but whatever.
+data Slice e = Slice {offsetS :: !Int,
+                        sizeS :: !Int,
+                        bufferS :: !(Buffer e)
+                    }
+
+instance Show (Slice e) where
+    show s = "<Slice " ++ show (offsetS s, sizeS s) ++ ">"
+
+instance BufferLike Slice where
+    asSlice = id
+
+slice :: Storable e => BufferLike b => Int -> Int -> b e -> Slice e
+slice o s b = let
+                b' = asSlice b
+                n = bufferSize (bufferS b')
+                o' = if o < 0 then offsetS b' else min n (offsetS b'+o)
+                s' = if o' + s > n then n-o' else s
+                in Slice {offsetS = o', sizeS = s', bufferS=bufferS b'}
+
+
+instance BufferLike b => CopyTo b Ptr where
+    b =: p = let s = asSlice b
+                 in writeBuffer (bufferS s) NonBlocking
+                        (offsetS s) (sizeS s) p
+
+instance BufferLike b => CopyTo Ptr b where
+    p =: b = let s = asSlice b
+                 in readBuffer (bufferS s) NonBlocking
+                        (offsetS s) (sizeS s) p
+
+instance (BufferLike b1, BufferLike b2) => CopyTo b1 b2 where
+    b1 =: b2 = let
+        s1 = asSlice b1
+        s2 = asSlice b2
+        in if sizeS s1 /= sizeS s2
+            then error "Mismatched sizes in buffer-to-buffer copy!"
+            else copyBuffer (bufferS s2) (bufferS s1)
+                    (offsetS s2) (offsetS s1) (sizeS s1)
+
+
+
 {#fun clRetainMemObject as retainMemObject
   `MemObject m' =>
   { withMemObject* `m'
@@ -239,6 +299,10 @@ memFlags m = (accessFlag exists, memInit)
 -- | Size of the data store, in bytes.
 memSize :: MemObject m => m -> Int
 memSize m = getPureProp (getMemInfo m CLMemSize)
+
+-- | Number of elements in the buffer.
+bufferSize :: forall e . Storable e => Buffer e -> Int
+bufferSize b = memSize b `div` sizeOf (undefined :: e)
 
 -- Since the Mem doesn't have an associated finalizer, we don't have to
 -- worry about races like we do in clQueue.

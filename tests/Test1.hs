@@ -46,9 +46,7 @@ main = do
     withBuffer context MemReadOnly NoHostPtr size $ \aMem -> do
     withBuffer context MemReadOnly NoHostPtr size $ \bMem -> do
     withBuffer context MemReadWrite NoHostPtr size $ \ansMem -> do
-    waitForCommands queue [writeBuffer aMem NonBlocking 0 size a
-                          ,writeBuffer bMem NonBlocking 0 size b
-                          ]
+    waitForCommands queue [aMem =: a, bMem =: b]
     -- Run the kernel:
     setKernelArgs kernel $ aMem &: bMem &: Scalar (2::Float)
                                 &: ansMem &: []
@@ -56,7 +54,7 @@ main = do
     waitForEvent eKernel
     statEvent eKernel
     -- Get the result, and print it out:
-    waitForCommand queue (readBuffer ansMem NonBlocking 0 size results)
+    waitForCommand queue (results =: ansMem)
     putStrLn "First 10 results are:"
     peekArray size results >>= print . take 10
 
