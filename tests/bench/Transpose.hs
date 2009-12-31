@@ -25,9 +25,9 @@ main = do
     -- fill with random data:
     forM_ [0..sizeX*sizeY-1] $ \i -> randomIO >>= pokeElemOff h_idata i
     -- allocate device memeory and copy host to it:
-    d_idata <- newBuffer (simpleCxt p) MemReadOnly
-                    (CopyHostPtr h_idata) size2
-    d_odata <- newBuffer (simpleCxt p) MemWriteOnly NoHostPtr size2
+    withBuffer (simpleCxt p) MemReadOnly
+        (CopyHostPtr h_idata) size2 $ \d_idata -> do
+    withBuffer (simpleCxt p) MemWriteOnly NoHostPtr size2 $ \d_odata -> do
     -- Run the tests
     bs <- mapM (testKernel p d_idata d_odata) ks
     defaultMain bs
