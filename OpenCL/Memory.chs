@@ -32,6 +32,7 @@ module OpenCL.Memory(
 #include <OpenCL/OpenCL.h>
 import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
+import OpenCL.CommandQueue(Command(..))
 import OpenCL.Error
 import Data.Maybe
 import Control.Applicative
@@ -121,9 +122,8 @@ blockingFlag NonBlocking = 0
   , `Int'
   , `Int'
   , castPtr `Ptr a'
-  , id `CUInt'
-  , id `Ptr (Ptr ())'
-  , id `Ptr (Ptr ())'
+  , withEvents* `[Event]'&
+  , alloca- `Event' newEvent*
   } -> `Int' checkSuccess-
 #}
 
@@ -144,9 +144,8 @@ readBuffer mem block offset size p
   , `Int'
   , `Int'
   , castPtr `Ptr a'
-  , id `CUInt'
-  , id `Ptr (Ptr ())'
-  , id `Ptr (Ptr ())'
+  , withEvents* `[Event]'&
+  , alloca- `Event' newEvent*
   } -> `Int' checkSuccess-
 #}
 
@@ -166,9 +165,8 @@ writeBuffer mem blocking offset size p
   , `Int'
   , `Int'
   , `Int'
-  , id `CUInt'
-  , id `Ptr (Ptr ())'
-  , id `Ptr (Ptr ())'
+  , withEvents* `[Event]'&
+  , alloca- `Event' newEvent*
   } -> `Int' checkSuccess-
 #}
 

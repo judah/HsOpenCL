@@ -35,7 +35,7 @@ import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
 import OpenCL.Error
 import OpenCL.Platform(Size,ULong)
-import OpenCL.CommandQueue (commandWith)
+import OpenCL.CommandQueue (Command(..), commandWith)
 import Control.Monad
 
 {#fun clCreateKernel as createKernel
@@ -73,7 +73,7 @@ createKernelsInProgram prog =
 -- API TODO
 -- note doing withArg is silly since memobjs need manual release...
 class KernelArg a where
-    withKernelArg :: a -> (Int -> Ptr () -> IO ()) -> IO ()
+    withKernelArg :: a -> (Int -> Ptr () -> IO b) -> IO b
 
 instance KernelArg (Buffer a) where
     -- buffers are set the same as a scalar pointer would be.
@@ -119,9 +119,8 @@ x &: xs = SomeArg x : xs
   , id `Ptr CULong' -- currently, must be null.
   , id `Ptr CULong' -- global work size
   , id `Ptr CULong' -- local work size
-  , id `CUInt'
-  , castPtr `Ptr (Ptr ())'
-  , castPtr `Ptr (Ptr ())'
+  , withEvents* `[Event]'&
+  , alloca- `Event' newEvent*
   } -> `Int' checkSuccess-
 #}
 
@@ -132,21 +131,20 @@ ndRangeKernel kernel global local
 -- TODO: check # of args with getinfo
 runKernelWithArgs :: NDRange d => Kernel -> d -> Maybe d
                         -> [SomeArg] -> Command
-runKernelWithArgs k global local as = Command $ \q n es e -> let
-            loop _ [] = runKernel' k global local q n es e
+runKernelWithArgs k global local as = Command $ \q es -> let
+            loop _ [] = runKernel' k global local q es
             loop c (SomeArg x:xs) = withKernelArg x $ \n p -> do
                             clSetKernelArg k c n p
                             loop (c+1) xs
             in loop 0 as
 
 runKernel' :: NDRange d => Kernel -> d -> Maybe d
-            -> CommandQueue -> CUInt -> Ptr (Ptr ()) -> Ptr (Ptr ()) -> IO ()
-runKernel' kernel globalWorkSize localWorkSize queue n es e
+            -> CommandQueue -> [Event] -> IO Event
+runKernel' kernel globalWorkSize localWorkSize queue es
        = withArrayLen (rangeDims globalWorkSize) $ \dim globalSizes ->
           withLocalSizeArray dim $ \localSizes ->
             clEnqueueNDRangeKernel queue kernel dim nullPtr
-                    globalSizes localSizes
-                    n es e
+                    globalSizes localSizes es
   where
     withLocalSizeArray dim = case localWorkSize of
         Nothing -> ($ nullPtr)
@@ -178,9 +176,8 @@ instance Integral a => NDRange (a,a,a) where
 {#fun clEnqueueTask
  { withCommandQueue* `CommandQueue'
  , withKernel* `Kernel'
-  , id `CUInt'
-  , castPtr `Ptr (Ptr ())'
-  , castPtr `Ptr (Ptr ())'
+  , withEvents* `[Event]'&
+  , alloca- `Event' newEvent*
  } -> `Int' checkSuccess-
 #}
 

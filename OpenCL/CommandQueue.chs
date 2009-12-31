@@ -6,7 +6,7 @@ module OpenCL.CommandQueue(
                 flush,
                 finish,
                 -- ** Commands
-                Command,
+                Command(..),
                 enqueue,
                 enqueue_,
                 enqueues_,
@@ -213,14 +213,13 @@ getEventCommandExecutionStatus e = toEnum <$>
 
 
 -------
+newtype Command = Command {runCommand :: CommandQueue -> [Event] -> IO Event}
+
 enqueue :: CommandQueue -> Command -> [Event] -> IO Event
-enqueue q (Command f) es = withEvents es $ \(n,es_p) ->
-                            alloca $ \e_p -> do
-                                f q n es_p e_p
-                                newEvent e_p
+enqueue q f = runCommand f q
 
 enqueue_ :: CommandQueue -> Command -> IO ()
-enqueue_ q (Command f) = f q 0 nullPtr nullPtr
+enqueue_ q f = enqueue q f [] >> return ()
 
 enqueues_ :: CommandQueue -> [Command] -> IO ()
 enqueues_ q = mapM_ (enqueue_ q)
@@ -231,9 +230,9 @@ waitForCommand q c = enqueue q c [] >>= waitForEvent
 waitForCommands :: CommandQueue -> [Command] -> IO ()
 waitForCommands q cs = mapM (\c -> enqueue q c []) cs >>= waitForEvents
 
-commandWith :: ( (a -> IO ()) -> IO ()) -> (a -> Command) -> Command
-commandWith f g = Command $ \q n es e -> f $ \x -> case g x of
-                                Command g' -> g' q n es e
+commandWith :: ( (a -> IO Event) -> IO Event) -> (a -> Command) -> Command
+commandWith f g = Command $ \q es -> f $ \x -> case g x of
+                                Command g' -> g' q es
 
 
 --------------------------
