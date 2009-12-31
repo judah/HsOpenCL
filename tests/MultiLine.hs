@@ -49,3 +49,12 @@ declareKernel name_str ty text = sequence
   where
     name = mkName name_str
 
+{-
+Spec:
+Use Parsec.
+parse through for __kernel
+(alt: build, get names of kernels, then parse through for them
+if we find /*, skip until the next */.
+parse the arguments of the __kernel fnc and turn into something.
+
+-}
