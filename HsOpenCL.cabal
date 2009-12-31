@@ -1,6 +1,6 @@
-name:                OpenCL-temp
+name:                HsOpenCL
 version:             0.0
-synopsis:            <Project description>
+synopsis:            A binding to the OpenCL parallel computing framework.
 description:         <Project description>
 category:            
 license:             BSD3
