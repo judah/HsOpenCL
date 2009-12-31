@@ -14,8 +14,8 @@ module OpenCL.Kernel(
                 setKernelArgs,
                 -- ** Running kernels
                 NDRange,
-                enqueueNDRangeKernel,
-                enqueueTask,
+                ndRangeKernel,
+                task,
                 -- * Queries
                 kernelFunctionName,
                 kernelNumArgs,
@@ -99,25 +99,27 @@ infixr 6 &:
 x &: xs = SomeArg x : xs
 
 
-{#fun clEnqueueNDRangeKernel as clEnqueueNDRangeKernel
+{#fun clEnqueueNDRangeKernel
   { withCommandQueue* `CommandQueue'
   , withKernel* `Kernel'
   , `Int'
   , id `Ptr CULong' -- currently, must be null.
   , id `Ptr CULong' -- global work size
   , id `Ptr CULong' -- local work size
-  , withEvents* `[Event]'&
-  , alloca- `Event' newEvent*
+  , id `CUInt'
+  , castPtr `Ptr (Ptr ())'
+  , castPtr `Ptr (Ptr ())'
   } -> `Int' checkSuccess-
 #}
 
-enqueueNDRangeKernel :: NDRange d => CommandQueue -> Kernel
-                        -> d -> Maybe d -> [Event] -> IO Event
-enqueueNDRangeKernel queue kernel globalWorkSize localWorkSize events
-    = withArrayLen (rangeDims globalWorkSize) $ \dim globalSizes ->
+ndRangeKernel :: NDRange d => Kernel -> d -> Maybe d -> Command
+ndRangeKernel kernel globalWorkSize localWorkSize
+    = Command $ \queue n es e ->
+       withArrayLen (rangeDims globalWorkSize) $ \dim globalSizes ->
         withLocalSizeArray dim $ \localSizes ->
             clEnqueueNDRangeKernel queue kernel dim nullPtr
-                    globalSizes localSizes events
+                    globalSizes localSizes
+                    n es e
   where
     withLocalSizeArray dim = case localWorkSize of
         Nothing -> ($ nullPtr)
@@ -144,14 +146,18 @@ instance Integral a => NDRange (a,a,a) where
 
 
 
-{#fun clEnqueueTask as enqueueTask
+{#fun clEnqueueTask
  { withCommandQueue* `CommandQueue'
  , withKernel* `Kernel'
- , withEvents* `[Event]'&
- , alloca- `Event' newEvent*
+  , id `CUInt'
+  , castPtr `Ptr (Ptr ())'
+  , castPtr `Ptr (Ptr ())'
  } -> `Int' checkSuccess-
 #}
 
+
+task :: Kernel -> Command
+task kernel = Command $ \queue -> clEnqueueTask queue kernel
 ---------
 -- Queries
 

@@ -130,6 +130,13 @@ newEvent p = peek p >>= newData Event clReleaseEvent
 
 foreign import ccall "&" clReleaseEvent :: Releaser Event_
 
+
+--------------
+-- Command
+newtype Command = Command (CommandQueue ->
+                    CUInt -> Ptr (Ptr ()) -> Ptr (Ptr ()) -> IO ())
+
+
 ---------
 -- Most of the types have a clGet*Info function following the same
 -- template;

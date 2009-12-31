@@ -71,13 +71,13 @@ instance KernelFunc (IO ()) where
                                     >> return ()
     liftWith = id
 
-runKernel :: Kernel -> SimpleProgram -> [Param] -> IO Event
-runKernel kernel prog params = case commonSize (map snd params) of
-    Nothing -> enqueueTask (simpleQueue prog) kernel []
-    Just size -> do
-        setKernelArgs kernel (map fst params)
-        enqueueNDRangeKernel (simpleQueue prog) kernel size
-                    Nothing []
+runKernel :: Kernel -> SimpleProgram -> [Param] -> IO ()
+runKernel kernel prog params = do
+    setKernelArgs kernel (map fst params)
+    waitForCommand (simpleQueue prog)
+        $ case commonSize (map snd params) of
+            Nothing -> ndRangeKernel kernel () Nothing
+            Just size -> ndRangeKernel kernel size Nothing
 
 -- Nothing means we should use enqueueTask.
 commonSize :: [Maybe Int] -> Maybe Int
@@ -97,8 +97,8 @@ instance (Storable e) =>  KernelFunc (IO (CArray Int e)) where
             a <- newArray_ (0,size-1)
             withIOCArray a $ \p -> do
             bracketBuffer prog MemWriteOnly NoHostPtr size
-                (\m -> enqueueReadBuffer (simpleQueue prog) m Blocking
-                                0 size p [])
+                (\m -> enqueue_ (simpleQueue prog)
+                            $ readBuffer m Blocking 0 size p)
                 $ \m -> (applyKFunc kernel prog ((SomeArg m, Just size):ps)
                                     :: IO ())
             unsafeFreezeIOCArray a
@@ -134,8 +134,8 @@ instance (Ix i, Storable e) => KernelArg (IOCArray i e) where
         withIOCArray a $ \p -> do
             size <- rangeSize <$> getBounds a
             bracketBuffer prog MemReadWrite (CopyHostPtr p) size
-                (\m -> enqueueReadBuffer (simpleQueue prog) m Blocking
-                            0 size p [])
+                (\m -> enqueue_ (simpleQueue prog)
+                        $ readBuffer m Blocking 0 size p)
                 $ \m -> f (SomeArg m, Just size)
 
 

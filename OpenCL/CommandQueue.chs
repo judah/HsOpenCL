@@ -5,6 +5,13 @@ module OpenCL.CommandQueue(
                 createCommandQueue,
                 flush,
                 finish,
+                -- ** Commands
+                Command,
+                enqueue,
+                enqueue_,
+                enqueues_,
+                waitForCommand,
+                waitForCommands,
                 -- * Querying info and properties
                 queueDevice,
                 queueContext,
@@ -13,6 +20,7 @@ module OpenCL.CommandQueue(
                 -- * Events
                 Event,
                 waitForEvents,
+                waitForEvent,
                 eventCommandQueue,
                 CommandType(..),
                 eventCommandType,
@@ -126,6 +134,9 @@ setQueueProperties queue props bool
   } -> `CLInt' checkSuccess-
 #}
 
+waitForEvent :: Event -> IO ()
+waitForEvent e = waitForEvents [e]
+
 {#fun clGetEventInfo as getEventInfo
   { withEvent* `Event'
   , cEnum `CLEventInfo'
@@ -199,8 +210,30 @@ getEventCommandExecutionStatus e = toEnum <$>
     getProp (getEventInfo e CLEventCommandExecutionStatus)
 
 
+
+-------
+enqueue :: CommandQueue -> Command -> [Event] -> IO Event
+enqueue q (Command f) es = withEvents es $ \(n,es_p) ->
+                            alloca $ \e_p -> do
+                                f q n es_p e_p
+                                newEvent e_p
+
+enqueue_ :: CommandQueue -> Command -> IO ()
+enqueue_ q (Command f) = f q 0 nullPtr nullPtr
+
+enqueues_ :: CommandQueue -> [Command] -> IO ()
+enqueues_ q = mapM_ (enqueue_ q)
+
+waitForCommand :: CommandQueue -> Command -> IO ()
+waitForCommand q c = enqueue q c [] >>= waitForEvent
+
+waitForCommands :: CommandQueue -> [Command] -> IO ()
+waitForCommands q cs = mapM (\c -> enqueue q c []) cs >>= waitForEvents
+
 --------------------------
 
+-- how would this fit in?
+-- return a "wait for event" marker?
 {#fun clEnqueueMarker as enqueueMarker
   { withCommandQueue* `CommandQueue'
   , alloca- `Event' newEvent*

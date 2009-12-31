@@ -1,10 +1,7 @@
 module Main where
 
--- TODO: use the criterion library.
--- TODO: bench without returning Event and see how much faster it is.
--- TODO: crashes when compiled!
 import System.Time
-import Criterion.Main hiding (run)
+import Criterion.Main
 
 import OpenCL
 import OpenCL.Simple hiding (KernelArg)
@@ -28,9 +25,9 @@ main = do
     -- fill with random data:
     forM_ [0..sizeX*sizeY-1] $ \i -> randomIO >>= pokeElemOff h_idata i
     -- allocate device memeory and copy host to it:
-    d_idata <- createBuffer (simpleCxt p) MemReadOnly
+    d_idata <- newBuffer (simpleCxt p) MemReadOnly
                     (CopyHostPtr h_idata) size2
-    d_odata <- createBuffer (simpleCxt p) MemWriteOnly NoHostPtr size2
+    d_odata <- newBuffer (simpleCxt p) MemWriteOnly NoHostPtr size2
     -- Run the tests
     bs <- mapM (testKernel p d_idata d_odata) ks
     defaultMain bs
@@ -43,17 +40,14 @@ testKernel p idata odata k = do
     setKernelArgs k args
     -- they do some sort of rounding up for the global size,
     -- but I think with the above dimensions we're OK.
-    
     let globalSize = (sizeX,sizeY)
     let localSize = Just (blockDim,blockDim)
-    let run = enqueueNDRangeKernel (simpleQueue p) k globalSize localSize []
-    
     return $ bench ("kernel-" ++ kernelFunctionName k)
-                    $ run >> return ()
+               $ waitForCommand (simpleQueue p)
+               $ ndRangeKernel k globalSize localSize
   where
     localBlock :: Local Float
     localBlock = Local $ blockDim * (blockDim+1)
-    args = idata :& odata :& Scalar sizeX :& Scalar sizeY
-                    :& if kernelNumArgs k == 5 
-                        then localBlock :& KNil
-                        else KNil
+    args = idata &: odata &: Scalar sizeX &: Scalar sizeY
+                    &: if kernelNumArgs k == 5 
+                        then [SomeArg localBlock] else []

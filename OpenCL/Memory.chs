@@ -13,9 +13,9 @@ module OpenCL.Memory(
                 withBuffer,
                 -- * Reading, writing and copying buffers
                 IsBlocking(..),
-                enqueueReadBuffer,
-                enqueueWriteBuffer,
-                enqueueCopyBuffer,
+                readBuffer,
+                writeBuffer,
+                copyBuffer,
                 -- * Properties
                 memFlags,
                 memSize,
@@ -78,7 +78,7 @@ newBuffer :: forall a . Storable a
             -> IO (Buffer a)
 newBuffer context memAccess hostPtr size
     = clCreateBuffer context flags (size * eltSize) p'
-  where 
+  where
     flags = memFlag : hostPtrFlags
     eltSize = sizeOf (undefined :: a)
     (hostPtrFlags, p')
@@ -115,18 +115,19 @@ blockingFlag NonBlocking = 0
   , `Int'
   , `Int'
   , castPtr `Ptr a'
-  , withEvents*`[Event]'&
-  , alloca- `Event' newEvent*
+  , id `CUInt'
+  , id `Ptr (Ptr ())'
+  , id `Ptr (Ptr ())'
   } -> `Int' checkSuccess-
 #}
 
-enqueueReadBuffer :: forall a . Storable a 
-        => CommandQueue -> Buffer a -> IsBlocking
+readBuffer :: forall a . Storable a
+        => Buffer a -> IsBlocking
                                 -> Int -- ^ The offset index.
                                 -> Int -- ^ The number of elements to copy.
-                    -> Ptr a -> [Event] -> IO Event
-enqueueReadBuffer queue mem block offset size p
-    = clEnqueueReadBuffer queue mem block
+                    -> Ptr a -> Command
+readBuffer mem block offset size p
+    = Command $ \queue -> clEnqueueReadBuffer queue mem block
                             (offset * eltWidth) (size * eltWidth) p
   where eltWidth = sizeOf (undefined :: a)
 
@@ -137,18 +138,18 @@ enqueueReadBuffer queue mem block offset size p
   , `Int'
   , `Int'
   , castPtr `Ptr a'
-  , withEvents*`[Event]'&
-  , alloca- `Event' newEvent*
+  , id `CUInt'
+  , id `Ptr (Ptr ())'
+  , id `Ptr (Ptr ())'
   } -> `Int' checkSuccess-
 #}
 
-enqueueWriteBuffer :: forall a . Storable a 
-        => CommandQueue -> Buffer a -> IsBlocking
+writeBuffer :: forall a . Storable a => Buffer a -> IsBlocking
                                 -> Int -- ^ The offset index.
                                 -> Int -- ^ The number of elements to copy.
-                                -> Ptr a -> [Event] -> IO Event
-enqueueWriteBuffer queue mem blocking offset size p
-    = clEnqueueWriteBuffer queue mem blocking
+                                -> Ptr a -> Command
+writeBuffer mem blocking offset size p
+    = Command $ \queue -> clEnqueueWriteBuffer queue mem blocking
                             (offset * eltWidth) (size * eltWidth) p
   where eltWidth = sizeOf (undefined :: a)
 
@@ -159,20 +160,22 @@ enqueueWriteBuffer queue mem blocking offset size p
   , `Int'
   , `Int'
   , `Int'
-  , withEvents*`[Event]'&
-  , alloca- `Event' newEvent*
+  , id `CUInt'
+  , id `Ptr (Ptr ())'
+  , id `Ptr (Ptr ())'
   } -> `Int' checkSuccess-
 #}
 
-enqueueCopyBuffer :: forall a . Storable a
-    => CommandQueue -> Buffer a -- ^ The source buffer
+copyBuffer :: forall a . Storable a
+    => Buffer a -- ^ The source buffer
             -> Buffer a -- ^ The destination buffer.
             -> Int -- ^ The offset index in the source buffer.
             -> Int -- ^ The offset index in the destination.
             -> Int -- ^ The number of elements to copy.
-            -> [Event] -> IO Event
-enqueueCopyBuffer queue source dest srcOff destOff size
-    = clEnqueueCopyBuffer queue source dest
+            -> Command
+copyBuffer source dest srcOff destOff size
+    = Command $ \queue -> clEnqueueCopyBuffer queue
+            source dest
             (srcOff * eltWidth)
             (destOff * eltWidth)
             (size * eltWidth)
@@ -232,14 +235,14 @@ memFlags m = (accessFlag exists, memInit)
                     else getPtrProp CopyHostPtr
         | exists CLMemAllocHostPtr_ = AllocHostPtr
         | otherwise = NoHostPtr
-        
+
 -- | Size of the data store, in bytes.
 memSize :: MemObject m => m -> Int
 memSize m = getPureProp (getMemInfo m CLMemSize)
 
 -- Since the Mem doesn't have an associated finalizer, we don't have to
 -- worry about races like we do in clQueue.
--- Well, there's still a tiny race if another thread releases the Mem and 
+-- Well, there's still a tiny race if another thread releases the Mem and
 -- context in the middle of our computation; but it's reasonable
 -- to expect that the Buffer (and thus, OpenCL ensures, the Context) isn't
 -- freed by other threads during this computation.
@@ -253,7 +256,7 @@ getMemReferenceCount m
 
 --------
 --  Opaque class for cl_mem
--- 
+--
 -- There's a lot of ways we could go with the mem objects;
 -- but this API shouldn't add too much to what's already in OpenCL.
 
