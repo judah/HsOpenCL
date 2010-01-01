@@ -38,8 +38,11 @@ main = do
     withBuffer context MemReadOnly NoHostPtr size $ \bMem -> do
     withBuffer context MemReadWrite NoHostPtr size $ \ansMem -> do
     -- Run the program:
-    waitForCommands queue [aMem =: a, bMem =: b]
-    waitForCommand queue $ add size Nothing aMem bMem ansMem
-    waitForCommand queue $ results =: ansMem
+    -- Since we're not running out of order, we can queue all of
+    -- these up at once:
+    waitForCommands queue [aMem =: a, bMem =: b
+            , add size Nothing aMem bMem ansMem
+            , results =: ansMem
+            ]
     putStrLn "First 10 results are:"
     getElems results >>= print . take 10
