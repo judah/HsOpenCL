@@ -45,13 +45,12 @@ main = do
     -- Run the kernel:
     eKernel <- enqueue queue (runKernel kernel size Nothing
                                 aMem bMem (2::Float) ansMem)
-                        []
     waitForEvent eKernel
     statEvent eKernel
     -- Get the result, and print it out:
     waitForCommand queue (results =: ansMem)
     putStrLn "First 10 results are:"
-    getElems results >>= print . take 10
+    mapM (readArray results) [0..9] >>= print
 
 statEvent e = do
     putStrLn "Kernel timings:"

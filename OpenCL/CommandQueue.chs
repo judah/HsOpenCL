@@ -215,20 +215,23 @@ getEventCommandExecutionStatus e = toEnum <$>
 -------
 newtype Command = Command {runCommand :: CommandQueue -> [Event] -> IO Event}
 
-enqueue :: CommandQueue -> Command -> [Event] -> IO Event
-enqueue q f = runCommand f q
+enqueue :: CommandQueue -> Command -> IO Event
+enqueue q f = runCommand f q []
 
 enqueue_ :: CommandQueue -> Command -> IO ()
-enqueue_ q f = enqueue q f [] >> return ()
+enqueue_ q f = enqueue q f >> return ()
 
 enqueues_ :: CommandQueue -> [Command] -> IO ()
 enqueues_ q = mapM_ (enqueue_ q)
 
+waitingFor :: [Event] -> Command -> Command
+waitingFor es (Command f) = Command $ \q es' -> f q (es++es')
+
 waitForCommand :: CommandQueue -> Command -> IO ()
-waitForCommand q c = enqueue q c [] >>= waitForEvent
+waitForCommand q c = enqueue q c >>= waitForEvent
 
 waitForCommands :: CommandQueue -> [Command] -> IO ()
-waitForCommands q cs = mapM (\c -> enqueue q c []) cs >>= waitForEvents
+waitForCommands q cs = mapM (\c -> enqueue q c) cs >>= waitForEvents
 
 commandWith :: ( (a -> IO Event) -> IO Event) -> (a -> Command) -> Command
 commandWith f g = Command $ \q es -> f $ \x -> case g x of
