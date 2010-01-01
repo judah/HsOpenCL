@@ -2,7 +2,8 @@ module OpenCL.Program(Program,
                     createProgramWithSource,
                     createProgramWithBinary,
                     buildProgram,
-                    buildProgramAndPrintErrors,
+                    buildProgramForDevices,
+                    printBuildErrors,
                     unloadCompiler,
                     -- Queries
                     programContext,
@@ -20,8 +21,9 @@ module OpenCL.Program(Program,
 import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
 import OpenCL.Error
-import Control.Exception
+import OpenCL.Platform() -- for Show instance of DeviceID
 
+import Control.Exception
 import Control.Applicative
 import Control.Monad
 import Data.ByteString (ByteString)
@@ -53,13 +55,12 @@ createN sizes f = do
     return $ zipWith (flip fromForeignPtr 0) fps sizes
 
 createProgramWithSource :: Context -> [ByteString] -> IO Program
-createProgramWithSource context bs = withByteStringPtrs bs $ \cs lenP -> 
+createProgramWithSource context bs = withByteStringPtrs bs $ \cs lenP ->
     clCreateProgramWithSource context (length bs) cs lenP
 
 {#fun clCreateProgramWithBinary
   { withContext* `Context'
-  , `Int'
-  , id `Ptr (Ptr ())' -- devices
+  , withDeviceIDs* `[DeviceID]'&
   , id `Ptr CULong'
   , castPtr `Ptr CString'
   , id `Ptr CInt' -- binary statuses
@@ -73,11 +74,11 @@ createProgramWithSource context bs = withByteStringPtrs bs $ \cs lenP ->
 -- maybe add another constructor to CLError?
 createProgramWithBinary :: Context -> [(DeviceID,ByteString)] -> IO Program
 createProgramWithBinary cxt devBinaries = do
+    let numDevices = length devBinaries
     let (devs,binaries) = unzip devBinaries
-    withArrayLen (map deviceIDPtr devs) $ \numDevices devsP -> do
     withByteStringPtrs binaries $ \binariesP lengthsP -> do
     allocaArray numDevices $ \statuses -> do
-    clCreateProgramWithBinary cxt numDevices devsP lengthsP
+    clCreateProgramWithBinary cxt devs lengthsP
                     binariesP statuses
 
 
@@ -85,8 +86,8 @@ createProgramWithBinary cxt devBinaries = do
 
 {#fun clBuildProgram as clBuildProgram
   { withProgram* `Program'
-  , cEnum `Int'
-  , castPtr `Ptr (Ptr _DeviceID)'
+  , id `CUInt'
+  , id `Ptr (Ptr ())'
   , `String'
   , castFunPtr `FunPtr ()' -- notification
   , id `Ptr ()'
@@ -94,19 +95,25 @@ createProgramWithBinary cxt devBinaries = do
 #}
 
 -- TODO: options should be String or ByteString?
--- TODO: device_list argument (seems somewhat superfluous...)  Maybe [DeviceID]
 buildProgram :: Program -> String -> IO ()
 buildProgram prog options = clBuildProgram prog 0 nullPtr options nullFunPtr nullPtr
 
-buildProgramAndPrintErrors :: Program -> String -> IO ()
-buildProgramAndPrintErrors prog options = handle printErr
-                                        $ buildProgram prog options
+buildProgramForDevices :: Program -> [DeviceID] -> String -> IO ()
+buildProgramForDevices prog devs options = withDeviceIDs devs $ \(n,ds) ->
+    clBuildProgram prog n ds options nullFunPtr nullPtr
+
+printBuildErrors :: Program -> IO a -> IO a
+printBuildErrors prog = handle printErr
   where
     printErr :: CLError -> IO a
     printErr e = do
-        putStrLn $ "Got exception: " ++ show e
-        forM_ (programDevices prog)
-            $ \dev -> getBuildLog prog dev >>= B.putStrLn
+        putStrLn $ "Error building program: " ++ show e
+        forM_ (programDevices prog) $ \dev -> do
+            stat <- getBuildStatus prog dev
+            when (stat == BuildError) $ do
+                log <- getBuildLog prog dev
+                putStrLn (show dev ++ ":")
+                B.putStrLn log
         throw e
 
 {#fun clUnloadCompiler as unloadCompiler

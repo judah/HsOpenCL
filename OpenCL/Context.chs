@@ -17,8 +17,7 @@ import Control.Applicative
 
 {#fun clCreateContext as clCreateContext
   { id `Ptr CLong'
-  , `Int'
-  , castPtr `Ptr (Ptr DeviceID_)' -- TODO: allow more than one, I guess...
+  , withDeviceIDs* `[DeviceID]'&
   , castFunPtr `FunPtr ()'
   , id `Ptr ()'
   , alloca- `CInt' checkSuccessPtr*-
@@ -26,8 +25,7 @@ import Control.Applicative
 #}
 
 createContext :: [DeviceID] -> IO Context
-createContext devices = withArrayLen (map _deviceIDPtr devices) $ \n ps ->
-            clCreateContext nullPtr n ps nullFunPtr nullPtr
+createContext devices = clCreateContext nullPtr devices nullFunPtr nullPtr
 
 -- TODO: the DeviceType is actually a bitfield
 {#fun clCreateContextFromType as clCreateContextFromType

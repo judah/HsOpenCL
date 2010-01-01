@@ -28,7 +28,7 @@ main = do
     queue <- createCommandQueue context dev [QueueProfilingEnable]
     prog <- createProgramWithSource context [myprog]
     -- Build the program:
-    buildProgramAndPrintErrors prog ""
+    printBuildErrors prog $ buildProgram prog ""
     kernel <- createKernel prog "add"
     -- Allocate the host memory:
     let size = read n :: Int

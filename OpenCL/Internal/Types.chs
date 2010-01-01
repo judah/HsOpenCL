@@ -35,6 +35,10 @@ newtype DeviceID = DeviceID {_deviceIDPtr :: Ptr DeviceID_}
 deviceIDPtr :: DeviceID -> Ptr ()
 deviceIDPtr (DeviceID p) = castPtr p
 
+withDeviceIDs :: [DeviceID] -> ((CUInt, Ptr (Ptr ())) -> IO a) -> IO a
+withDeviceIDs devices f = withArrayLen (map _deviceIDPtr devices)
+                            $ \n ps -> f (toEnum n, castPtr ps)
+
 data PlatformID_
 newtype PlatformID = PlatformID {_platformIDPtr :: Ptr PlatformID_}
 platformIDPtr :: PlatformID -> Ptr ()
