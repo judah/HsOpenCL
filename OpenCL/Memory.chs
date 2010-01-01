@@ -18,9 +18,10 @@ module OpenCL.Memory(
                 copyBuffer,
                 -- ** Convenience class
                 CopyTo(..),
-                BufferLike,
+                BufferLike(..),
                 Slice(),
                 slice,
+                sizeS,
                 -- * Properties
                 memFlags,
                 memSize,

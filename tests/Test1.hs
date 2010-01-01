@@ -3,10 +3,11 @@ module Main where
 
 import OpenCL
 import MultiLine
+import OpenCL.Instances.CArray
 
-import Foreign
-import Foreign.C
 import qualified Data.ByteString as B
+import Data.Array.CArray
+import Data.Array.IOCArray
 
 import System.Environment
 
@@ -39,9 +40,10 @@ main = do
     -- Allocate the host memory:
     let size = read n :: Int
     let n = toEnum size
-    withArray [0..n-1] $ \(a :: Ptr Float) -> do
-    withArray [n-1,n-2..0] $ \(b :: Ptr Float) -> do
-    allocaArray size $ \(results :: Ptr Float) -> do
+    let bounds = (0,size-1)
+    let a :: CArray Int Float = listArray bounds [0..n-1]
+    b :: IOCArray Int Float <- newListArray bounds [n-1,n-2..0]
+    results :: IOCArray Int Float <- newArray_ bounds
     -- Allocate the device memory, and copy the data manually:
     withBuffer context MemReadOnly NoHostPtr size $ \aMem -> do
     withBuffer context MemReadOnly NoHostPtr size $ \bMem -> do
@@ -56,7 +58,7 @@ main = do
     -- Get the result, and print it out:
     waitForCommand queue (results =: ansMem)
     putStrLn "First 10 results are:"
-    peekArray size results >>= print . take 10
+    getElems results >>= print . take 10
 
 statEvent e = do
     putStrLn "Kernel timings:"

@@ -21,6 +21,7 @@ exposed-modules:
     OpenCL.Memory
     OpenCL
     OpenCL.Simple
+    OpenCL.Instances.CArray
 other-modules:
     OpenCL.Internal.C2HS
     OpenCL.Internal.Types
