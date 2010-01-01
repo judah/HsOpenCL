@@ -1,4 +1,7 @@
-module OpenCL.Instances.CArray() where
+module OpenCL.Instances.CArray(
+        asCArray,
+        asIOCArray,
+        ) where
 
 -- helper instances for using CArrays.
 
@@ -10,6 +13,15 @@ import Data.Array.CArray
 import Data.Array.CArray.Base
 import Control.Concurrent
 import Foreign.ForeignPtr
+
+-- Give the type-checker some hints, since functions like newArray
+-- are polymorphic.  This seems less messy than a bunch of ScopedTypeVariable
+-- bindings.
+asCArray :: CArray i a -> CArray i a
+asCArray = id
+
+asIOCArray :: IO (IOCArray i a) -> IO (IOCArray i a)
+asIOCArray = id
 
 -- instance (Ix i, BufferLike b) => CopyTo b (CArray i) where
 --    a =: b = copyCArrayToBuf a b

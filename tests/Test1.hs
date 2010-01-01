@@ -3,9 +3,9 @@ module Main where
 
 import OpenCL
 import MultiLine
-import OpenCL.Instances.CArray
 
 import qualified Data.ByteString as B
+import OpenCL.Instances.CArray
 import Data.Array.CArray
 import Data.Array.IOCArray
 

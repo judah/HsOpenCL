@@ -8,6 +8,10 @@ import OpenCL.Simple
 import System.Environment
 import Foreign
 
+import OpenCL.Instances.CArray
+import Data.Array.CArray
+import Data.Array.IOCArray
+
 -- declareKernelsFromFile "prog" "test_prog.cl"
 declareKernels "prog" [$clProg| __kernel void
             add(__global float *a,__global float *b, __global float *answer)
@@ -20,14 +24,15 @@ declareKernels "prog" [$clProg| __kernel void
 
 main = do
     [ns] <- getArgs
-    let size = read ns :: Int
+    let size = read ns
     let n = toEnum size
     let context = simpleCxt prog
     let queue = simpleQueue prog
     -- Allocate host memory:
-    withArray [0..n-1] $ \a -> do
-    withArray [n-1,n-2..0] $ \b -> do
-    allocaArray size $ \results -> do
+    let bounds = (0,size-1)
+    let a = asCArray $ listArray bounds [0..n-1]
+    b <- asIOCArray $ newListArray bounds [n-1,n-2..0]
+    results <- asIOCArray $ newArray_ bounds
     -- Allocate device memory:
     withBuffer context MemReadOnly NoHostPtr size $ \aMem -> do
     withBuffer context MemReadOnly NoHostPtr size $ \bMem -> do
@@ -37,7 +42,4 @@ main = do
     waitForCommand queue $ add size Nothing aMem bMem ansMem
     waitForCommand queue $ results =: ansMem
     putStrLn "First 10 results are:"
-    peekArray size results >>= print . take 10
-    
-    
-    
+    getElems results >>= print . take 10
