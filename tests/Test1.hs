@@ -11,8 +11,6 @@ import Data.Array.IOCArray
 
 import System.Environment
 
-import Control.Exception
-
 myprog = [$clProg|
             __kernel void add(__global float *a, __global float *b,
                                 float c, __global float *answer)
@@ -30,12 +28,7 @@ main = do
     queue <- createCommandQueue context dev [QueueProfilingEnable]
     prog <- createProgramWithSource context [myprog]
     -- Build the program:
-    handle (\(e::CLError) -> do
-                print ("exception:",e)
-                log <- getBuildLog prog dev
-                print log
-                throw e)
-            $ buildProgram prog ""
+    buildProgramAndPrintErrors prog ""
     kernel <- createKernel prog "add"
     -- Allocate the host memory:
     let size = read n :: Int

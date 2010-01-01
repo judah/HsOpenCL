@@ -2,6 +2,7 @@ module OpenCL.Program(Program,
                     createProgramWithSource,
                     createProgramWithBinary,
                     buildProgram,
+                    buildProgramAndPrintErrors,
                     unloadCompiler,
                     -- Queries
                     programContext,
@@ -19,10 +20,12 @@ module OpenCL.Program(Program,
 import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
 import OpenCL.Error
+import Control.Exception
 
 import Control.Applicative
 import Control.Monad
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as B
 import Data.ByteString.Unsafe (unsafeUseAsCStringLen)
 import Data.ByteString.Internal (fromForeignPtr, mallocByteString)
 
@@ -94,6 +97,17 @@ createProgramWithBinary cxt devBinaries = do
 -- TODO: device_list argument (seems somewhat superfluous...)  Maybe [DeviceID]
 buildProgram :: Program -> String -> IO ()
 buildProgram prog options = clBuildProgram prog 0 nullPtr options nullFunPtr nullPtr
+
+buildProgramAndPrintErrors :: Program -> String -> IO ()
+buildProgramAndPrintErrors prog options = handle printErr
+                                        $ buildProgram prog options
+  where
+    printErr :: CLError -> IO a
+    printErr e = do
+        putStrLn $ "Got exception: " ++ show e
+        forM_ (programDevices prog)
+            $ \dev -> getBuildLog prog dev >>= B.putStrLn
+        throw e
 
 {#fun clUnloadCompiler as unloadCompiler
   { } -> `Int' checkSuccess*-
