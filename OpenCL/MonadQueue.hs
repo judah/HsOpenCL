@@ -8,6 +8,8 @@ module OpenCL.MonadQueue(QueueT(..)
 import OpenCL.Internal.Types
 
 import Control.Monad.Trans
+import Data.Ix
+import Data.Array.Base(MArray(..))
 
 -- TODOs:
 -- - does calling API each time we want a device or context cause a slowdown?
@@ -48,3 +50,14 @@ class MonadBracket m => MonadQueue m where
 
 instance MonadBracket m => MonadQueue (QueueT m) where
     getQueue = QueueT return
+
+-- TODO: see if INLINEs are necessary
+instance MArray a e m => MArray a e (QueueT m) where
+    getBounds = lift . getBounds
+    getNumElements = lift . getNumElements
+    newArray bounds e = lift $ newArray bounds e
+    newArray_ = lift . newArray_
+    unsafeNewArray_ = lift . unsafeNewArray_
+    unsafeRead a i = lift $ unsafeRead a i
+    unsafeWrite a i x = lift $ unsafeWrite a i x
+

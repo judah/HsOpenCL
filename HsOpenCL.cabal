@@ -10,6 +10,8 @@ maintainer:          judah.jacobson@gmail.com
 build-depends:       base>=4, haskell98, bytestring, array, mtl,
                      -- For OpenCL.TH:
                      template-haskell, parsec==3.*,
+                     -- For OpenCL.Instances:
+                     carray
 build-type:          Simple
 ghc-options:         
 build-tools: c2hs
