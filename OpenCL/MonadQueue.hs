@@ -26,9 +26,11 @@ instance Monad m => Monad (QueueT m) where
     return x = QueueT $ const $ return x
     f >>= g = QueueT $ \q -> runQueueT f q >>= flip runQueueT q . g
 
-instance MonadIO m => MonadIO (QueueT m) where
-    liftIO = QueueT . const . liftIO
+instance MonadTrans QueueT where
+    lift = QueueT . const
 
+instance MonadIO m => MonadIO (QueueT m) where
+    liftIO = lift . liftIO
 
 class MonadIO m => MonadBracket m where
     liftIOBracket :: (forall b . (a -> IO b) -> IO b)
