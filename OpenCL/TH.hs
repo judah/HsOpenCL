@@ -7,11 +7,16 @@ import Text.Parsec
 import Text.Parsec.ByteString
 import Language.Haskell.TH
 import Language.Haskell.TH.Quote
-import OpenCL
 import Control.Applicative ((<$>))
 import Control.Monad
 import qualified Data.ByteString.Char8 as B
 import System.IO.Unsafe
+
+import OpenCL.Program
+import OpenCL.Kernel
+import OpenCL.MonadQueue
+import OpenCL.CommandQueue
+import OpenCL.Memory
 
 {-
 This module declares Template Haskell commands for automatically

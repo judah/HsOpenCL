@@ -7,6 +7,7 @@ module OpenCL(
           , module OpenCL.Memory
           , module OpenCL.Platform
           , module OpenCL.Program
+          , module OpenCL.TH
             ) where
 
 import OpenCL.CommandQueue
@@ -17,3 +18,4 @@ import OpenCL.Kernel
 import OpenCL.Memory
 import OpenCL.Platform
 import OpenCL.Program
+import OpenCL.TH
