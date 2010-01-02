@@ -2,7 +2,6 @@
 module Main where
 
 import OpenCL
-import OpenCL.TH
 import OpenCL.Instances.CArray
 
 import qualified Data.ByteString as B
@@ -29,8 +28,8 @@ main = runQueueForType DeviceTypeGPU $ do
     let n = toEnum size
     let bounds = (0,size-1)
     let a :: CArray Int Float = listArray bounds [0..n-1]
-    b :: IOCArray Int Float <- liftIO $ newListArray bounds [n-1,n-2..0]
-    results :: IOCArray Int Float <- liftIO $ newArray_ bounds
+    b :: IOCArray Int Float <- newListArray bounds [n-1,n-2..0]
+    results :: IOCArray Int Float <- newArray_ bounds
     -- Allocate the device memory, and copy the data manually:
     withBuffer MemReadOnly NoHostPtr size $ \aMem -> do
     withBuffer MemReadOnly NoHostPtr size $ \bMem -> do
