@@ -44,7 +44,7 @@ enum CLDeviceType {
     DeviceTypeAll = CL_DEVICE_TYPE_ALL
 };
 #endc
-{#enum CLDeviceType as DeviceType {} deriving (Eq,Show)#}
+{#enum CLDeviceType as DeviceType {} deriving (Eq,Show,Read)#}
 
 -- since CL_DEVICE_TYPE_ALL causes an overflow:
 deviceTypeEnum :: DeviceType -> CULLong 
