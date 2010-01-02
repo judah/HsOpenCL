@@ -1,5 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
-module Parse(declareKernelsFromFile
+module OpenCL.TH(declareKernelsFromFile
             , declareKernels
             , clProg
             ) where

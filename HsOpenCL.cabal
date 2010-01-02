@@ -7,7 +7,8 @@ license:             BSD3
 license-file:        LICENSE
 author:              Judah Jacobson
 maintainer:          judah.jacobson@gmail.com
-build-depends:       base>=4, haskell98, bytestring, carray, mtl
+build-depends:       base>=4, haskell98, bytestring, carray, mtl,
+                     template-haskell, parsec==3.*
 build-type:          Simple
 ghc-options:         
 build-tools: c2hs
@@ -16,12 +17,13 @@ exposed-modules:
     OpenCL.Platform
     OpenCL.Context
     OpenCL.Program
+    OpenCL.MonadQueue
     OpenCL.CommandQueue
     OpenCL.Kernel
     OpenCL.Memory
     OpenCL
     OpenCL.Instances.CArray
-    OpenCL.MonadQueue
+    OpenCL.TH
 other-modules:
     OpenCL.Internal.C2HS
     OpenCL.Internal.Types
@@ -29,7 +31,7 @@ other-modules:
 extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
             ScopedTypeVariables, GADTs, MultiParamTypeClasses
             TypeSynonymInstances, FlexibleInstances, OverlappingInstances
-            Rank2Types
+            Rank2Types, TemplateHaskell
 frameworks: OpenCL
 -- Note: -fvia-C prevents a segfault (ghc trac #3789)
 ghc-options: -fvia-C

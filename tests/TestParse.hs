@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell,QuasiQuotes, Rank2Types #-}
 module Main where
 
-import Parse
 import OpenCL
+import OpenCL.TH
+import OpenCL.Instances.CArray
 import System.Environment
 import Foreign
 
-import OpenCL.Instances.CArray
 import Data.Array.CArray
 import Data.Array.IOCArray
 
