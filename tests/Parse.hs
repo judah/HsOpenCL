@@ -1,30 +1,39 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Parse where
+module Parse(declareKernelsFromFile
+            , declareKernels
+            , clProg
+            ) where
 
 import Text.Parsec
 import Text.Parsec.ByteString
 import Language.Haskell.TH
+import Language.Haskell.TH.Quote
 import OpenCL
-import OpenCL.Simple
 import Control.Applicative ((<$>))
 import Control.Monad
 import qualified Data.ByteString.Char8 as B
 import System.IO.Unsafe
 
 {-
-Alternate, safe way:
-declare datatype Prog_= as record
-and have a function buildProg which builds the file and fills
-the records.
+This module declares Template Haskell commands for automatically
+importing an OpenCL file into source code, with type-safety.
+
+For example, say file.cl contains two kernels:
+
+__kernel void add(__global float *a, __global float* b, __global float* c)
+__kernel void scale(float x, __global float *y)
+
+Then calling $(declareKernelsFromFile "ProgAdd" "path/to/file.cl") outputs
+two declarations:
+
+ data ProgAdd = ProgAdd {add :: Buffer Float -> Buffer Float
+                                -> Bufer Float -> Command
+                        , scale :: Float -> Buffer Float -> Command
+                        }
+
+buildProgAdd :: MonadQueue m => m ProgAdd
+buildProgAdd = ...
 -}
-
--- Alt: use Once (one-shot)-style IO actions. --
-
--- Bool, others; should they get extra instances?
--- i.e. instance KernelArg (Scalar Bool) where...
--- Alt, just do a whitelist of allowed args...
--- yeah, that's prob. better.
--- (then don't want Storable, rather something else?)
 
 declareKernelsFromFile :: String -> FilePath -> Q [Dec]
 declareKernelsFromFile progStr file = do
@@ -38,23 +47,35 @@ declareKernels progStr contents = do
                         ++ show (loc_start loc, loc_end loc))
         progStr contents
 
+clProg :: QuasiQuoter
+clProg = QuasiQuoter (\s -> appE (varE 'B.pack) (litE $ stringL s))
+            (litP . stringL)
+
 
 declareKernels' :: String -> String -> B.ByteString -> Q [Dec]
 declareKernels' source progStr contents
     = case runParser clFile () source contents of
-        Left err -> do
-            report True $ "Error parsing OpenCL file: " ++ show err
-            return []
-        Right fs -> do
-                let progName = mkName progStr
-                sequence $ concat [
-                            map kernelSig fs
-                            , progDef progName (B.unpack contents)
-                            , map (kernelDef progName . fst) fs
-                            ]
+            Left err -> do
+                report True $ "Error parsing OpenCL file: " ++ show err
+                return []
+            Right fs -> let
+                progName = mkName progStr
+                buildName = mkName ("build" ++ progStr)
+                in sequence [ declareProgData progName fs
+                            , declareBuildSig buildName progName
+                            , declareBuildDef buildName progName fs
+                                      (B.unpack contents)
+                            ] 
 
-kernelSig :: (String, [Type]) -> Q Dec
-kernelSig (nameStr,ty) = sigD (mkName nameStr) (kerFuncType ty)
+declareProgData :: Name -> [(String,[Type])] -> Q Dec
+declareProgData prog fields = do
+    dataD (return []) prog []
+            [recC prog (map mkField fields)] []
+  where
+    mkField (name,argTypes) = do
+        t <- kerFuncType argTypes
+        return (mkName name,NotStrict,t)
+
 
 kerFuncType :: [Type] -> TypeQ
 kerFuncType types = do
@@ -64,19 +85,35 @@ kerFuncType types = do
     loop [] = ConT ''Command
     loop (t:ts) = AppT (AppT ArrowT t) $ loop ts
 
+declareBuildSig :: Name -> Name -> Q Dec
+declareBuildSig buildName progName = sigD buildName
+            [t|MonadQueue m => m $(conT progName)|]
 
-progDef :: Name -> String -> [Q Dec]
-progDef p text = [valD (varP p) (normalB body) []]
-  where
-    body = [|unsafePerformIO $ newSimpleProgram DeviceTypeGPU
-                                [B.pack $(stringE text)]|]
-
-kernelDef :: Name -> String -> Q Dec
-kernelDef p kName = valD (varP (mkName kName)) (normalB body) []
-  where
-    body = [|unsafePerformIO $ do
-                k <- createKernel (simpleProgram $(varE p)) $(stringE kName)
-                return $ runKernel k |]
+-- OK, now the build def:
+-- buildProg = do
+--   p <- buildProgramFromSource "" [contents]
+--   ker1_ <- createKernel p kerNameStr
+--   ...
+--   return Prog {ker1_=ker1, ,,,}
+--
+declareBuildDef :: Name -> Name -> [(String,[Type])] -> String -> Q Dec
+declareBuildDef buildName progName fs contents
+    = do
+        p <- newName "p"
+        ks <- replicateM (length fs) (newName "k")
+        let kernels = zip ks (map fst fs)
+        let builder = bindS (varP p) [|buildProgramFromSource "" [B.pack $(stringE contents)]|]
+        let bindKernel (k, kerStr) = bindS (varP k)
+                                    [|createKernel $(varE p) $(stringE kerStr)|]
+        let setField (k, kerStr) = return (mkName kerStr,AppE (VarE 'runKernel) (VarE k))
+        let constructor = recConE progName $ map setField kernels
+        valD (varP buildName)
+            (normalB $ doE $ concat [[builder]
+                                , map bindKernel kernels
+                                , [noBindS [|return $constructor|] ] ])
+            []
+            
+    
 
 
 

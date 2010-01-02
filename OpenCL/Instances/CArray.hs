@@ -20,7 +20,7 @@ import Foreign.ForeignPtr
 asCArray :: CArray i a -> CArray i a
 asCArray = id
 
-asIOCArray :: IO (IOCArray i a) -> IO (IOCArray i a)
+asIOCArray :: m (IOCArray i a) -> m (IOCArray i a)
 asIOCArray = id
 
 -- instance (Ix i, BufferLike b) => CopyTo b (CArray i) where

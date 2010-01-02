@@ -1,10 +1,8 @@
-{-# LANGUAGE TemplateHaskell,QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell,QuasiQuotes, Rank2Types #-}
 module Main where
 
 import Parse
-import MultiLine
 import OpenCL
-import OpenCL.Simple
 import System.Environment
 import Foreign
 
@@ -13,7 +11,7 @@ import Data.Array.CArray
 import Data.Array.IOCArray
 
 -- declareKernelsFromFile "prog" "test_prog.cl"
-declareKernels "prog" [$clProg| __kernel void
+declareKernels "ProgAdd" [$clProg| __kernel void
             add(__global float *a,__global float *b, __global float *answer)
             {
 	        int gid = get_global_id(0);
@@ -21,28 +19,24 @@ declareKernels "prog" [$clProg| __kernel void
             }|]
 
 
-
-main = do
-    [ns] <- getArgs
+main = runQueueForType DeviceTypeGPU $ do
+    [ns] <- liftIO getArgs
     let size = read ns
     let n = toEnum size
-    let context = simpleCxt prog
-    let queue = simpleQueue prog
     -- Allocate host memory:
     let bounds = (0,size-1)
     let a = asCArray $ listArray bounds [0..n-1]
-    b <- asIOCArray $ newListArray bounds [n-1,n-2..0]
-    results <- asIOCArray $ newArray_ bounds
+    b <- asIOCArray $ liftIO $ newListArray bounds [n-1,n-2..0]
+    results <- asIOCArray $ liftIO $ newArray_ bounds
     -- Allocate device memory:
-    withBuffer context MemReadOnly NoHostPtr size $ \aMem -> do
-    withBuffer context MemReadOnly NoHostPtr size $ \bMem -> do
-    withBuffer context MemReadWrite NoHostPtr size $ \ansMem -> do
+    withBuffer MemReadOnly NoHostPtr size $ \aMem -> do
+    withBuffer MemReadOnly NoHostPtr size $ \bMem -> do
+    withBuffer MemReadWrite NoHostPtr size $ \ansMem -> do
     -- Run the program:
-    -- Since we're not running out of order, we can queue all of
-    -- these up at once:
-    waitForCommands queue [aMem =: a, bMem =: b
-            , add size Nothing aMem bMem ansMem
-            , results =: ansMem
-            ]
-    putStrLn "First 10 results are:"
-    getElems results >>= print . take 10
+    prog <- buildProgAdd
+    waitForCommands [aMem =: a, bMem =: b]
+    waitForCommands [add prog size Nothing aMem bMem ansMem]
+    waitForCommands [results =: ansMem]
+    liftIO $ do
+        putStrLn "First 10 results are:"
+        mapM (readArray results) [0..9] >>= print
