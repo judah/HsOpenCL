@@ -35,8 +35,8 @@ two declarations:
                         , scale :: Float -> Buffer Float -> Command
                         }
 
-buildProgAdd :: MonadQueue m => m ProgAdd
-buildProgAdd = ...
+buildProgAdd :: MonadQueue m => String -> m ProgAdd
+buildProgAdd options = ...
 -}
 
 declareKernelsFromFile :: String -> FilePath -> Q [Dec]
@@ -91,11 +91,11 @@ kerFuncType types = do
 
 declareBuildSig :: Name -> Name -> Q Dec
 declareBuildSig buildName progName = sigD buildName
-            [t|MonadQueue m => m $(conT progName)|]
+            [t|MonadQueue m => String -> m $(conT progName)|]
 
 -- OK, now the build def:
--- buildProg = do
---   p <- buildProgramFromSource "" [contents]
+-- buildProg options = do
+--   p <- buildProgramFromSource options [contents]
 --   ker1_ <- createKernel p kerNameStr
 --   ...
 --   return Prog {ker1_=ker1, ,,,}
@@ -104,21 +104,19 @@ declareBuildDef :: Name -> Name -> [(String,[Type])] -> String -> Q Dec
 declareBuildDef buildName progName fs contents
     = do
         p <- newName "p"
+        opts <- newName "opts"
         ks <- replicateM (length fs) (newName "k")
         let kernels = zip ks (map fst fs)
-        let builder = bindS (varP p) [|buildProgramFromSource "" [B.pack $(stringE contents)]|]
+        let builder = bindS (varP p)
+             [|buildProgramFromSource $(varE opts) [B.pack $(stringE contents)]|]
         let bindKernel (k, kerStr) = bindS (varP k)
                                     [|createKernel $(varE p) $(stringE kerStr)|]
         let setField (k, kerStr) = return (mkName kerStr,AppE (VarE 'runKernel) (VarE k))
         let constructor = recConE progName $ map setField kernels
-        valD (varP buildName)
-            (normalB $ doE $ concat [[builder]
+        body <- (normalB $ doE $ concat [[builder]
                                 , map bindKernel kernels
                                 , [noBindS [|return $constructor|] ] ])
-            []
-            
-    
-
+        return $ FunD buildName [Clause [VarP opts] body []]
 
 
 
