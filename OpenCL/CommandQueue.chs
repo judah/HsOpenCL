@@ -5,11 +5,16 @@ module OpenCL.CommandQueue(
                 createCommandQueue,
                 flush,
                 finish,
+                -- * The Queue monad
+                runQueueForType,
+                runQueueForDevice,
+                runQueueForContext,
+                getContext,
+                getDevice,
+                setProperties,
                 -- ** Commands
                 Command(..),
                 enqueue,
-                enqueue_,
-                enqueues_,
                 waitForCommand,
                 waitForCommands,
                 commandWith,
@@ -41,16 +46,15 @@ module OpenCL.CommandQueue(
 import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
 import OpenCL.Error
+import OpenCL.MonadQueue
+import OpenCL.Context
+import OpenCL.Platform
+import OpenCL.Platform.Foreign(CommandQueueProperty(..))
 
 import Control.Applicative
+import Control.Monad
+import Control.Monad.Trans
 
-#c
-enum CommandQueueProperty {
-    QueueOutOfOrderExecModeEnable = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,
-    QueueProfilingEnable = CL_QUEUE_PROFILING_ENABLE
-};
-#endc
-{#enum CommandQueueProperty {} deriving (Show,Eq)#}
 
 {#fun clCreateCommandQueue as createCommandQueue
   { withContext* `Context'
@@ -130,12 +134,15 @@ setQueueProperties queue props bool
 ------------------
 -- Events
 
-{#fun clWaitForEvents as waitForEvents
+{#fun clWaitForEvents
   { withEvents* `[Event]'&
   } -> `CLInt' checkSuccess-
 #}
 
-waitForEvent :: Event -> IO ()
+waitForEvents :: MonadIO m => [Event] -> m ()
+waitForEvents = liftIO . clWaitForEvents
+
+waitForEvent :: MonadIO m => Event -> m ()
 waitForEvent e = waitForEvents [e]
 
 {#fun clGetEventInfo as getEventInfo
@@ -215,23 +222,19 @@ getEventCommandExecutionStatus e = toEnum <$>
 -------
 newtype Command = Command {runCommand :: CommandQueue -> [Event] -> IO Event}
 
-enqueue :: CommandQueue -> Command -> IO Event
-enqueue q f = runCommand f q []
-
-enqueue_ :: CommandQueue -> Command -> IO ()
-enqueue_ q f = enqueue q f >> return ()
-
-enqueues_ :: CommandQueue -> [Command] -> IO ()
-enqueues_ q = mapM_ (enqueue_ q)
+enqueue :: MonadQueue m => Command -> m Event
+enqueue f = do
+    q <- getQueue
+    liftIO $ runCommand f q []
 
 waitingFor :: [Event] -> Command -> Command
 waitingFor es (Command f) = Command $ \q es' -> f q (es++es')
 
-waitForCommand :: CommandQueue -> Command -> IO ()
-waitForCommand q c = enqueue q c >>= waitForEvent
+waitForCommand :: MonadQueue m => Command -> m ()
+waitForCommand c = waitForCommands [c]
 
-waitForCommands :: CommandQueue -> [Command] -> IO ()
-waitForCommands q cs = mapM (\c -> enqueue q c) cs >>= waitForEvents
+waitForCommands :: MonadQueue m => [Command] -> m ()
+waitForCommands cs = mapM enqueue cs >>= waitForEvents
 
 commandWith :: ( (a -> IO Event) -> IO Event) -> (a -> Command) -> Command
 commandWith f g = Command $ \q es -> f $ \x -> case g x of
@@ -293,3 +296,28 @@ getCommandStart e = getProp (getProfInfo e CLProfilingCommandStart)
 getCommandEnd :: Event -> IO Word64
 getCommandEnd e = getProp (getProfInfo e CLProfilingCommandEnd)
 
+getContext :: MonadQueue m => m Context
+getContext = liftM queueContext getQueue
+
+getDevice :: MonadQueue m => m DeviceID
+getDevice = liftM queueDevice getQueue
+
+setProperties :: MonadQueue m => [CommandQueueProperty] -> Bool -> m ()
+setProperties props bool = do
+    queue <- getQueue
+    liftIO $ setQueueProperties queue props bool
+
+runQueueForDevice  :: MonadIO m => DeviceID -> QueueT m a -> m a
+runQueueForDevice dev f = do
+    cxt <- liftIO $ createContext [dev]
+    runQueueForContext dev cxt f
+
+runQueueForType :: MonadIO m => DeviceType -> QueueT m a -> m a
+runQueueForType dtype f = do
+    dev <- liftIO $ getDeviceID dtype
+    runQueueForDevice dev f
+
+runQueueForContext :: MonadIO m => DeviceID -> Context -> QueueT m a -> m a
+runQueueForContext dev cxt f = do
+    queue <- liftIO $ createCommandQueue cxt dev []
+    runQueueT f queue

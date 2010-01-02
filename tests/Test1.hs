@@ -19,38 +19,33 @@ myprog = [$clProg|
                 answer[gid] = a[gid] + c*b[gid];
             }|]
 
-main = do
-    [n] <- getArgs
-    -- Initialize the context:
-    dev <- getDeviceID DeviceTypeGPU
-    print ("device:",dev)
-    context <- createContext [dev]
-    queue <- createCommandQueue context dev [QueueProfilingEnable]
-    prog <- createProgramWithSource context [myprog]
-    -- Build the program:
-    printBuildErrors prog $ buildProgram prog ""
-    kernel <- createKernel prog "add"
+main = runQueueForType DeviceTypeGPU $ do
+    setProperties [QueueProfilingEnable] True
+    [n] <- liftIO $ getArgs
+    prog <- buildProgramFromSource "" [myprog]
+    kernel <- liftIO $ createKernel prog "add"
     -- Allocate the host memory:
     let size = read n :: Int
     let n = toEnum size
     let bounds = (0,size-1)
     let a :: CArray Int Float = listArray bounds [0..n-1]
-    b :: IOCArray Int Float <- newListArray bounds [n-1,n-2..0]
-    results :: IOCArray Int Float <- newArray_ bounds
+    b :: IOCArray Int Float <- liftIO $ newListArray bounds [n-1,n-2..0]
+    results :: IOCArray Int Float <- liftIO $ newArray_ bounds
     -- Allocate the device memory, and copy the data manually:
-    withBuffer context MemReadOnly NoHostPtr size $ \aMem -> do
-    withBuffer context MemReadOnly NoHostPtr size $ \bMem -> do
-    withBuffer context MemReadWrite NoHostPtr size $ \ansMem -> do
-    waitForCommands queue [aMem =: a, bMem =: b]
+    withBuffer MemReadOnly NoHostPtr size $ \aMem -> do
+    withBuffer MemReadOnly NoHostPtr size $ \bMem -> do
+    withBuffer MemReadWrite NoHostPtr size $ \ansMem -> do
+    waitForCommands [aMem =: a, bMem =: b]
     -- Run the kernel:
-    eKernel <- enqueue queue (runKernel kernel size Nothing
+    eKernel <- enqueue (runKernel kernel size Nothing
                                 aMem bMem (2::Float) ansMem)
     waitForEvent eKernel
-    statEvent eKernel
-    -- Get the result, and print it out:
-    waitForCommand queue (results =: ansMem)
-    putStrLn "First 10 results are:"
-    mapM (readArray results) [0..9] >>= print
+    -- Print out the results:
+    waitForCommand (results =: ansMem)
+    liftIO $ do
+        statEvent eKernel
+        putStrLn "First 10 results are:"
+        mapM (readArray results) [0..9] >>= print
 
 statEvent e = do
     putStrLn "Kernel timings:"

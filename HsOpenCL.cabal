@@ -7,7 +7,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Judah Jacobson
 maintainer:          judah.jacobson@gmail.com
-build-depends:       base>=4, haskell98, bytestring, carray
+build-depends:       base>=4, haskell98, bytestring, carray, mtl
 build-type:          Simple
 ghc-options:         
 build-tools: c2hs
@@ -20,8 +20,8 @@ exposed-modules:
     OpenCL.Kernel
     OpenCL.Memory
     OpenCL
-    OpenCL.Simple
     OpenCL.Instances.CArray
+    OpenCL.MonadQueue
 other-modules:
     OpenCL.Internal.C2HS
     OpenCL.Internal.Types

@@ -5,6 +5,7 @@ module OpenCL.Program(Program,
                     buildProgramForDevices,
                     printBuildErrors,
                     unloadCompiler,
+                    buildProgramFromSource,
                     -- Queries
                     programContext,
                     programDevices,
@@ -22,6 +23,8 @@ import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
 import OpenCL.Error
 import OpenCL.Platform() -- for Show instance of DeviceID
+import OpenCL.MonadQueue
+import OpenCL.CommandQueue
 
 import Control.Exception
 import Control.Applicative
@@ -81,7 +84,12 @@ createProgramWithBinary cxt devBinaries = do
     clCreateProgramWithBinary cxt devs lengthsP
                     binariesP statuses
 
-
+-- | Convenience function; prints an error message when fails.
+buildProgramFromSource :: MonadQueue m => String -> [ByteString] -> m Program
+buildProgramFromSource options sources = getContext >>= \cxt -> liftIO $ do
+    prog <- createProgramWithSource cxt sources
+    printBuildErrors prog $ buildProgram prog options
+    return prog
 
 
 {#fun clBuildProgram as clBuildProgram

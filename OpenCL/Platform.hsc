@@ -77,7 +77,6 @@ import OpenCL.Internal.C2HS
 import OpenCL.Error
 import OpenCL.Internal.Types
 import OpenCL.Platform.Foreign
-import OpenCL.CommandQueue (CommandQueueProperty(..))
 
 getPlatformIDs :: IO [PlatformID]
 getPlatformIDs = map PlatformID <$> getObjArray clGetPlatformIDs

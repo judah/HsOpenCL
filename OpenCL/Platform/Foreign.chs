@@ -79,3 +79,11 @@ enum CLDeviceFPConfig{
 #endc
 {#enum CLDeviceFPConfig as DeviceFPConfig {} deriving (Eq,Show)#}
 
+#c
+enum CommandQueueProperty {
+    QueueOutOfOrderExecModeEnable = CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE,
+    QueueProfilingEnable = CL_QUEUE_PROFILING_ENABLE
+};
+#endc
+{#enum CommandQueueProperty {} deriving (Show,Eq)#}
+

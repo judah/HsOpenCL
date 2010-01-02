@@ -35,6 +35,8 @@ import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
 import OpenCL.CommandQueue(Command(..))
 import OpenCL.Error
+import OpenCL.MonadQueue
+import OpenCL.CommandQueue
 import Data.Maybe
 import Control.Applicative
 import Control.Exception
@@ -101,12 +103,14 @@ newBuffer context memAccess hostPtr size
             MemWriteOnly -> CLMemWriteOnly_
             MemReadOnly -> CLMemReadOnly_
 
-withBuffer :: Storable a => Context -> MemAccessFlag -> MemInitFlag a
+withBuffer :: (Storable a, MonadQueue m) => MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
-            -> (Buffer a -> IO b) -> IO b
-withBuffer context memAccess hostPtr size f = bracket
+            -> (Buffer a -> m b) -> m b
+withBuffer memAccess hostPtr size f = do
+    context <- getContext
+    liftIOBracket (bracket
         (newBuffer context memAccess hostPtr size)
-        releaseMemObject
+        releaseMemObject)
         f
 
 data IsBlocking = Blocking | NonBlocking

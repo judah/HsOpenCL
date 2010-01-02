@@ -35,15 +35,19 @@ import OpenCL.Internal.Types
 import OpenCL.Internal.C2HS
 import OpenCL.Error
 import OpenCL.Platform(Size,ULong)
-import OpenCL.CommandQueue (Command(..), commandWith)
+import OpenCL.MonadQueue
+import OpenCL.CommandQueue
 import Control.Monad
 
-{#fun clCreateKernel as createKernel
+{#fun clCreateKernel
   { withProgram* `Program'
   , `String'
   , alloca- `Ptr CInt' checkSuccessPtr*-
   } -> `Kernel' newKernel*
 #}
+
+createKernel :: MonadIO m => Program -> String -> m Kernel
+createKernel p name = liftIO $ clCreateKernel p name
 
 newKernel = newData Kernel clReleaseKernel
 foreign import ccall "&" clReleaseKernel :: Releaser Kernel_
