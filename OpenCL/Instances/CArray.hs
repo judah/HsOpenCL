@@ -23,15 +23,20 @@ asCArray = id
 asIOCArray :: m (IOCArray i a) -> m (IOCArray i a)
 asIOCArray = id
 
--- instance (Ix i, BufferLike b) => CopyTo b (CArray i) where
---    a =: b = copyCArrayToBuf a b
-
 enqueueWithFree :: IO a -> Command -> CommandQueue -> [Event] -> IO Event
 enqueueWithFree act f q es = do
     e <- runCommand f q es
-    forkIO $ waitForEvent e >> act >> return ()
+    forkIO $ myWait e >> act >> return ()
     return e
 
+myWait :: Event -> IO ()
+myWait e = do
+    stat <- getEventCommandExecutionStatus e
+    case stat of
+        Complete -> return ()
+        _ -> threadDelay time >> myWait e
+
+time = 10000
 iocarraySize (IOCArray _ _ n _) = n
 
 instance (Ix i) => CopyTo (IOCArray i) Slice where
