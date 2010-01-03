@@ -87,3 +87,28 @@ enum CommandQueueProperty {
 #endc
 {#enum CommandQueueProperty {} deriving (Show,Eq)#}
 
+#c
+enum DeviceExecutionCapability {
+    ExecKernel = CL_EXEC_KERNEL,
+    ExecNativeKernel = CL_EXEC_NATIVE_KERNEL,
+};
+#endc    
+{#enum DeviceExecutionCapability {} deriving (Show,Eq)#}
+
+#c
+enum DeviceLocalMemType {
+    LocalMem = CL_LOCAL,
+    GlobalMem = CL_GLOBAL,
+};
+#endc
+{#enum DeviceLocalMemType {} deriving (Show,Eq)#}
+
+#c
+enum CLDeviceGlobalMemCacheType {
+    CLNone = CL_NONE,
+    CLReadOnlyCache = CL_READ_ONLY_CACHE,
+    CLReadWriteCache = CL_READ_WRITE_CACHE,
+};
+#endc
+{#enum CLDeviceGlobalMemCacheType {} deriving (Eq)#}
+

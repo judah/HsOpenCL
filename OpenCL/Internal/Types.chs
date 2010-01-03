@@ -187,6 +187,9 @@ instance Enum a => Property (a -> Bool) where
 getFlags :: Enum a => GetInfoFunc -> [a] -> IO [a]
 getFlags getInfo fs = getProp getInfo >>= return . flip filter fs
 
+getPureFlags :: Enum a => GetInfoFunc -> [a] -> [a]
+getPureFlags getInfo = unsafePerformIO . getFlags getInfo
+
 instance Storable a => Property [a] where
     getProp getInfo = do
         retSize <- getInfo 0 nullPtr

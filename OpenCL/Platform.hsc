@@ -44,20 +44,23 @@ module OpenCL.Platform(
             deviceMinDataTypeAlignSize,
             deviceSingleFpConfig,
             DeviceFPConfig(..),
-            -- deviceGlobalMemCacheType,
+            deviceGlobalMemCacheType,
+            DeviceGlobalMemCacheType(..),
             deviceGlobalMemCachelineSize,
             deviceGlobalMemCacheSize,
             deviceGlobalMemSize,
             deviceMaxConstantBufferSize,
             deviceMaxConstantArgs,
-            -- deviceLocalMemType,
+            deviceLocalMemType,
+            DeviceLocalMemType(..),
             deviceLocalMemSize,
             deviceErrorCorrectionSupport,
             deviceProfilingTimerResolution,
             deviceEndianLittle,
             deviceAvailable,
             deviceCompilerAvailable,
-            -- deviceExecutionCapabilities,
+            deviceExecutionCapabilities,
+            DeviceExecutionCapability(..),
             deviceQueueProperties,
             deviceName,
             deviceVendor,
@@ -127,8 +130,7 @@ type ULong = #type cl_ulong
 -- Don't worrry about overflow; the spec says that CL_DEVICE_TYPE_ALL
 -- won't be returned.
 deviceType :: DeviceID -> [DeviceType]
-deviceType d = unsafePerformIO $ getFlags
-                        (clGetDeviceInfo d (#const CL_DEVICE_TYPE))
+deviceType d = getPureFlags (clGetDeviceInfo d (#const CL_DEVICE_TYPE))
                         [DeviceTypeCPU, DeviceTypeGPU
                         , DeviceTypeAccelerator, DeviceTypeDefault
                         ]
@@ -265,31 +267,38 @@ deviceExtensions = deviceInfo (#const CL_DEVICE_EXTENSIONS)
 --------
 
 deviceQueueProperties :: DeviceID -> [CommandQueueProperty]
-deviceQueueProperties dev = unsafePerformIO
-        $ getFlags (clGetDeviceInfo dev (#const CL_DEVICE_QUEUE_PROPERTIES))
-                            [QueueOutOfOrderExecModeEnable
-                            , QueueProfilingEnable
-                            ]
+deviceQueueProperties dev = getPureFlags
+        (clGetDeviceInfo dev (#const CL_DEVICE_QUEUE_PROPERTIES))
+            [QueueOutOfOrderExecModeEnable
+            , QueueProfilingEnable
+            ]
 
 deviceSingleFpConfig :: DeviceID -> [DeviceFPConfig]
-deviceSingleFpConfig dev = unsafePerformIO
-        $ getFlags (clGetDeviceInfo dev (#const CL_DEVICE_SINGLE_FP_CONFIG))
-                            [ FPDenorm
-                            , FPInfNan
-                            , FPRoundToNearest
-                            , FPRoundToZero
-                            ]
+deviceSingleFpConfig dev = getPureFlags
+        (clGetDeviceInfo dev (#const CL_DEVICE_SINGLE_FP_CONFIG))
+            [ FPDenorm
+            , FPInfNan
+            , FPRoundToNearest
+            , FPRoundToZero
+            ]
 
-{-
-deviceExecutionCapabilities :: DeviceID -> CLDeviceExecutionCapabilites
-deviceExecutionCapabilities = deviceInfo (#const CL_DEVICE_EXECUTION_CAPABILITIES)
+deviceExecutionCapabilities :: DeviceID -> [DeviceExecutionCapability]
+deviceExecutionCapabilities dev = getPureFlags
+        (clGetDeviceInfo dev (#const CL_DEVICE_EXECUTION_CAPABILITIES))
+                [ExecKernel, ExecNativeKernel]
 
-deviceLocalMemType :: DeviceID -> CLDeviceLocalMemType
-deviceLocalMemType = deviceInfo (#const CL_DEVICE_LOCAL_MEM_TYPE)
+deviceLocalMemType :: DeviceID -> DeviceLocalMemType
+deviceLocalMemType = toEnum . deviceInfo (#const CL_DEVICE_LOCAL_MEM_TYPE)
 
-deviceGlobalMemCacheType :: DeviceID -> CLDeviceGlobabMemCacheType
-deviceGlobalMemCacheType = deviceInfo (#const CL_DEVICE_GLOBAL_MEM_CACHE_TYPE)
--}
+data DeviceGlobalMemCacheType = ReadOnlyCache | ReadWriteCache
+                                    deriving (Show,Eq)
+
+deviceGlobalMemCacheType :: DeviceID -> Maybe DeviceGlobalMemCacheType
+deviceGlobalMemCacheType d
+    = case toEnum $ deviceInfo (#const CL_DEVICE_GLOBAL_MEM_CACHE_TYPE) d of
+        CLNone -> Nothing
+        CLReadOnlyCache -> Just ReadOnlyCache
+        CLReadWriteCache -> Just ReadWriteCache
 
 devicePlatform :: DeviceID -> PlatformID
 devicePlatform = PlatformID . castPtr . deviceInfo (#const CL_DEVICE_PLATFORM)

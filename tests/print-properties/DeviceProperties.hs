@@ -35,20 +35,20 @@ allNames = [
             ,'deviceMemBaseAddrAlign
             ,'deviceMinDataTypeAlignSize
             ,'deviceSingleFpConfig
-            -- ,'deviceGlobalMemCacheType
+            ,'deviceGlobalMemCacheType
             ,'deviceGlobalMemCachelineSize
             ,'deviceGlobalMemCacheSize
             ,'deviceGlobalMemSize
             ,'deviceMaxConstantBufferSize
             ,'deviceMaxConstantArgs
-            -- ,'deviceLocalMemType
+            ,'deviceLocalMemType
             ,'deviceLocalMemSize
             ,'deviceErrorCorrectionSupport
             ,'deviceProfilingTimerResolution
             ,'deviceEndianLittle
             ,'deviceAvailable
             ,'deviceCompilerAvailable
-            -- ,'deviceExecutionCapabilities
+            ,'deviceExecutionCapabilities
             ,'deviceQueueProperties
             ,'deviceName
             ,'deviceVendor
