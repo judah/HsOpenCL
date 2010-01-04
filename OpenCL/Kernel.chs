@@ -1,24 +1,16 @@
 module OpenCL.Kernel(
+                -- * Kernels
                 Kernel,
                 createKernel,
                 createKernelsInProgram,
-                -- * Tasks
-                -- ** Arguments
+                -- * Running kernels
+                runKernel,
+                NDRange,
+                KernelFunc,
                 KernelArg(),
-                setKernelArg,
+                -- ** KernelArg instances
                 Scalar(..),
                 Local(..),
-                -- *** Setting all arguments at once
-                SomeArg(..),
-                (&:),
-                setKernelArgs,
-                -- ** Running kernels
-                NDRange,
-                ndRangeKernel,
-                task,
-                -- *** KernelFunc
-                KernelFunc,
-                runKernel,
                 -- * Queries
                 kernelFunctionName,
                 kernelNumArgs,
@@ -61,8 +53,8 @@ foreign import ccall "&" clReleaseKernel :: Releaser Kernel_
 #}
 
 
-createKernelsInProgram :: Program -> IO [Kernel]
-createKernelsInProgram prog =
+createKernelsInProgram :: MonadIO m => Program -> m [Kernel]
+createKernelsInProgram prog = liftIO $
     getObjArray (clCreateKernelsInProgram prog)
         >>= mapM newKernel
 
@@ -84,6 +76,7 @@ instance KernelArg (Buffer a) where
     withKernelArg b f = withBufferPtr b $ \p -> withKernelArg (Scalar p) f
 
 -- newtype eliminates need for UndecidableInstances
+-- | A scalar argument, such as @float x@.
 newtype Scalar a = Scalar a
 instance Storable a => KernelArg (Scalar a) where
     withKernelArg (Scalar a) f = with a $ \p -> f (sizeOf a) (castPtr p)
@@ -96,7 +89,9 @@ instance KernelArg Float where
 instance KernelArg Int where
     withKernelArg x = withKernelArg (Scalar (toEnum x::CInt))
 
-data Local a = Local Int
+-- | A specification of a variable which is allocated in local memory and
+-- shared by all work-items of a work-group.  For example: @__local float *x@.
+newtype Local a = Local Int
 
 instance Storable a => KernelArg (Local a) where
     withKernelArg (Local n) f = f (sizeOf (undefined :: a)*n) nullPtr
@@ -272,9 +267,6 @@ getKernelLocalMemSize k d = getProp $ getWorkGroupInfo k d CLKernelLocalMemSize
 class KernelFunc f where
     -- liftWith :: ( (b -> IO ()) -> IO ()) -> (b -> f) -> f
     applyKFunc :: ([SomeArg] -> Command) -> [SomeArg] -> f
-
-doBefore :: IO () -> Command -> Command
-doBefore m c = commandWith (\f -> m >> f ()) (const c)
 
 instance KernelFunc Command where
     applyKFunc run as = run (reverse as)
