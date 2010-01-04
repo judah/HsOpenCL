@@ -145,14 +145,20 @@ runKernelWithArgs k global local as = Command $ \q es -> let
 runKernel' :: NDRange d => Kernel -> d -> Maybe d
             -> CommandQueue -> [Event] -> IO Event
 runKernel' kernel globalWorkSize localWorkSize queue es
-       = withArrayLen (rangeDims globalWorkSize) $ \dim globalSizes ->
+       = withArrayLen gsizes $ \dim globalSizes ->
           withLocalSizeArray dim $ \localSizes ->
             clEnqueueNDRangeKernel queue kernel dim nullPtr
                     globalSizes localSizes es
   where
+    gsizes = rangeDims globalWorkSize
     withLocalSizeArray dim = case localWorkSize of
         Nothing -> ($ nullPtr)
-        Just sizes -> withArray $ rangeDims sizes
+        Just sizesD -> let lsizes = rangeDims sizesD
+                       in if length lsizes /= length gsizes
+                            || or (zipWith (>) lsizes gsizes)
+                        then error $ "Incompatible global/local work sizes: "
+                                 ++ show (gsizes,lsizes)
+                        else withArray lsizes
 
 
 
