@@ -100,19 +100,12 @@ newProgram = newData Program clReleaseProgram
 -- Note: cl_mem's aren't retained when they're set as kernel arguments.
 -- Rather, they're only retained while the kernel is running, and released
 -- once it's finished.
--- So if we tried storing them in a ForeignPtr like the other types,
--- we could get the following race:
--- 1. Create Buffer for an input argument
--- 2. Call OpenCL to fill it with values
--- 3. Set it as a kernel arg
--- 4. Haskell GC
--- 5. Run kernel
--- If the Buffer is never used after step 5, it will be released prematurely
--- in step 4.  
+-- However, in OpenCL.Kernel the argument is set and run all within the same
+-- call to withBufferPtr, so this should actually be OK.
 data Buffer_
-newtype Buffer a = Buffer (Ptr Buffer_)
-withBufferPtr :: Buffer a -> (Ptr () -> IO b) -> IO b
-withBufferPtr (Buffer p) = ($ castPtr p)
+newtype Buffer a = Buffer (ForeignPtr Buffer_)
+withBuffer :: Buffer a -> (Ptr () -> IO b) -> IO b
+withBuffer (Buffer p) f = withForeignPtr p $ f . castPtr
 
 data Kernel_
 newtype Kernel = Kernel (ForeignPtr Kernel_)

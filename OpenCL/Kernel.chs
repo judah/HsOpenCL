@@ -73,7 +73,7 @@ class KernelArg a where
 
 instance KernelArg (Buffer a) where
     -- buffers are set the same as a scalar pointer would be.
-    withKernelArg b f = withBufferPtr b $ \p -> withKernelArg (Scalar p) f
+    withKernelArg b f = withBuffer b $ \p -> withKernelArg (Scalar p) f
 
 -- newtype eliminates need for UndecidableInstances
 -- | A scalar argument, such as @float x@.

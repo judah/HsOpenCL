@@ -31,9 +31,9 @@ main = do
     b <- asIOCArray $ newListArray bounds [n-1,n-2..0]
     results <- asIOCArray $ newArray_ bounds
     -- Allocate device memory:
-    withBuffer MemReadOnly NoHostPtr size $ \aMem -> do
-    withBuffer MemReadOnly NoHostPtr size $ \bMem -> do
-    withBuffer MemReadWrite NoHostPtr size $ \ansMem -> do
+    allocaBuffer MemReadOnly NoHostPtr size $ \aMem -> do
+    bMem <- newBuffer MemReadOnly NoHostPtr size
+    allocaBuffer MemReadWrite NoHostPtr size $ \ansMem -> do
     -- Run the program:
     prog <- buildProgAdd ""
     liftIO $ putStrLn "Running..."

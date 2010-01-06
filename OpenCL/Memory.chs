@@ -3,14 +3,12 @@ module OpenCL.Memory(
                 MemObject(),
                 MemAccessFlag(..),
                 MemInitFlag(..),
-                -- ** Resource management
-                releaseMemObject,
-                retainMemObject,
                 -- * Buffers
                 Buffer,
                 castBuffer,
                 newBuffer,
-                withBuffer,
+                allocaBuffer,
+                touchBuffer,
                 -- * Reading, writing and copying buffers
                 IsBlocking(..),
                 readBuffer,
@@ -67,11 +65,8 @@ enum CLMemFlags {
   , `Int'
   , castPtr `Ptr a'
   , alloca- `Ptr CInt' checkSuccessPtr*-
-  } -> `Buffer a' newBufferObj
+  } -> `Ptr Buffer_' castPtr
 #}
-
-newBufferObj :: Ptr () -> Buffer a
-newBufferObj = Buffer . castPtr
 
 data MemAccessFlag = MemReadWrite | MemWriteOnly | MemReadOnly
                     deriving (Show,Eq)
@@ -82,11 +77,20 @@ data MemInitFlag a = NoHostPtr | UseHostPtr (Ptr a)
                         | CopyAllocHostPtr (Ptr a)
                     deriving (Show,Eq)
 
-newBuffer :: forall a . Storable a
+newBuffer :: forall a m . (Storable a, MonadQueue m)
+        => MemAccessFlag -> MemInitFlag a
+            -> Int -- ^ The number of elements in the buffer.
+            -> m (Buffer a)
+newBuffer memAccess memInit size = do
+    cxt <- getContext
+    p <- liftIO $ newBuffer' cxt memAccess memInit size
+    liftIO $ Buffer <$> newForeignPtr clReleaseMemObject p
+
+newBuffer' :: forall a . (Storable a)
         => Context -> MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
-            -> IO (Buffer a)
-newBuffer context memAccess hostPtr size
+            -> IO (Ptr Buffer_)
+newBuffer' context memAccess hostPtr size
     = clCreateBuffer context flags (size * eltSize) p'
   where
     flags = memFlag : hostPtrFlags
@@ -103,15 +107,20 @@ newBuffer context memAccess hostPtr size
             MemWriteOnly -> CLMemWriteOnly_
             MemReadOnly -> CLMemReadOnly_
 
-withBuffer :: (Storable a, MonadQueue m) => MemAccessFlag -> MemInitFlag a
+touchBuffer :: MonadIO m => Buffer a -> m ()
+touchBuffer (Buffer f) = liftIO $ touchForeignPtr f
+
+-- | Note the buffer is freed at the end of this block, so it is unsafe to use it
+-- outside of the block.  (Unless you use 'touchMemObject'.)
+allocaBuffer :: (Storable a, MonadQueue m) => MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
             -> (Buffer a -> m b) -> m b
-withBuffer memAccess hostPtr size f = do
+allocaBuffer memAccess hostPtr size f = do
     context <- getContext
     liftIOBracket (bracket
-        (newBuffer context memAccess hostPtr size)
-        releaseMemObject)
-        f
+        (newBuffer' context memAccess hostPtr size)
+        (releaseMemObject . castPtr))
+      $ \p -> liftIO (newForeignPtr_ p) >>= f . Buffer
 
 data IsBlocking = Blocking | NonBlocking
                     deriving (Show,Eq)
@@ -122,7 +131,7 @@ blockingFlag NonBlocking = 0
 
 {#fun clEnqueueReadBuffer
   { withCommandQueue* `CommandQueue'
-  , withBufferPtr* `Buffer a'
+  , withBuffer* `Buffer a'
   , blockingFlag `IsBlocking'
   , `Int'
   , `Int'
@@ -144,7 +153,7 @@ readBuffer mem block offset size p
 
 {#fun clEnqueueWriteBuffer
   { withCommandQueue* `CommandQueue'
-  , withBufferPtr* `Buffer a'
+  , withBuffer* `Buffer a'
   , blockingFlag `IsBlocking'
   , `Int'
   , `Int'
@@ -165,8 +174,8 @@ writeBuffer mem blocking offset size p
 
 {#fun clEnqueueCopyBuffer
   { withCommandQueue* `CommandQueue'
-  , withBufferPtr* `Buffer a'
-  , withBufferPtr* `Buffer a'
+  , withBuffer* `Buffer a'
+  , withBuffer* `Buffer a'
   , `Int'
   , `Int'
   , `Int'
@@ -244,18 +253,13 @@ instance (BufferLike b1, BufferLike b2) => CopyTo b1 b2 where
                     (offsetS s2) (offsetS s1) (sizeS s1)
 
 
-
-{#fun clRetainMemObject as retainMemObject
-  `MemObject m' =>
-  { withMemObject* `m'
-  } -> `Int' checkSuccess-
-#}
+foreign import ccall "&" clReleaseMemObject :: Releaser m
 
 {#fun clReleaseMemObject as releaseMemObject
-  `MemObject m' =>
-  { withMemObject* `m'
+  { id `Ptr ()'
   } -> `Int' checkSuccess-
 #}
+
 
 {#fun clGetMemObjectInfo as getMemInfo
   `MemObject m' =>
@@ -331,4 +335,4 @@ class MemObject m where
     withMemObject :: m -> (Ptr () -> IO a) -> IO a
 
 instance MemObject (Buffer a) where
-    withMemObject = withBufferPtr
+    withMemObject = withBuffer
