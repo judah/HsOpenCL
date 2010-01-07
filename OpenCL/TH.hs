@@ -39,10 +39,14 @@ buildProgAdd :: MonadQueue m => String -> m ProgAdd
 buildProgAdd options = ...
 -}
 
+linePragma :: Int -> FilePath -> String
+linePragma n f = "#line " ++ show n ++ " " ++ show f ++ "\n"
+
 declareKernelsFromFile :: String -> FilePath -> Q [Dec]
 declareKernelsFromFile progStr file = do
     contents <- runIO $ B.readFile file
-    declareKernels' file progStr contents
+    let lineNum = B.pack $ linePragma 1 file
+    declareKernels' file progStr $ lineNum `B.append` contents
 
 declareKernels :: String -> B.ByteString -> Q [Dec]
 declareKernels progStr contents = do
@@ -52,8 +56,15 @@ declareKernels progStr contents = do
         progStr contents
 
 clProg :: QuasiQuoter
-clProg = QuasiQuoter (\s -> appE (varE 'B.pack) (litE $ stringL s))
+clProg = QuasiQuoter (\s -> appE (varE 'B.pack) (mkString s))
             (litP . stringL)
+  where
+    mkString s = do
+        loc <- location
+        let file = loc_filename loc
+        let lineNum = fst $ loc_start loc
+        litE $ stringL $ linePragma (fst (loc_start loc)) (loc_filename loc)
+                            ++ s
 
 
 declareKernels' :: String -> String -> B.ByteString -> Q [Dec]
