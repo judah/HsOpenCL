@@ -137,7 +137,7 @@ blockingFlag NonBlocking = 0
   , `Int'
   , castPtr `Ptr a'
   , withEvents* `[Event]'&
-  , alloca- `Event' newEvent*
+  , id `Ptr (Ptr ())'
   } -> `Int' checkSuccess-
 #}
 
@@ -147,7 +147,7 @@ readBuffer :: forall a . Storable a
                                 -> Int -- ^ The number of elements to copy.
                     -> Ptr a -> Command
 readBuffer mem block offset size p
-    = Command $ \queue -> clEnqueueReadBuffer queue mem block
+    = mkCommand $ \queue -> clEnqueueReadBuffer queue mem block
                             (offset * eltWidth) (size * eltWidth) p
   where eltWidth = sizeOf (undefined :: a)
 
@@ -159,7 +159,7 @@ readBuffer mem block offset size p
   , `Int'
   , castPtr `Ptr a'
   , withEvents* `[Event]'&
-  , alloca- `Event' newEvent*
+  , id `Ptr (Ptr ())'
   } -> `Int' checkSuccess-
 #}
 
@@ -168,7 +168,7 @@ writeBuffer :: forall a . Storable a => Buffer a -> IsBlocking
                                 -> Int -- ^ The number of elements to copy.
                                 -> Ptr a -> Command
 writeBuffer mem blocking offset size p
-    = Command $ \queue -> clEnqueueWriteBuffer queue mem blocking
+    = mkCommand $ \queue -> clEnqueueWriteBuffer queue mem blocking
                             (offset * eltWidth) (size * eltWidth) p
   where eltWidth = sizeOf (undefined :: a)
 
@@ -180,7 +180,7 @@ writeBuffer mem blocking offset size p
   , `Int'
   , `Int'
   , withEvents* `[Event]'&
-  , alloca- `Event' newEvent*
+  , id `Ptr (Ptr ())'
   } -> `Int' checkSuccess-
 #}
 
@@ -192,7 +192,7 @@ copyBuffer :: forall a . Storable a
             -> Int -- ^ The number of elements to copy.
             -> Command
 copyBuffer source dest srcOff destOff size
-    = Command $ \queue -> clEnqueueCopyBuffer queue
+    = mkCommand $ \queue -> clEnqueueCopyBuffer queue
             source dest
             (srcOff * eltWidth)
             (destOff * eltWidth)

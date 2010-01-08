@@ -28,6 +28,7 @@ newData :: (ForeignPtr a_ -> a) -> Releaser a_
 newData construct release p = construct <$> newForeignPtr release (castPtr p)
 
 
+
 -- Note that unlike the others, DeviceID and PlatformID have no way to be
 -- released, so it's just a pointer.
 data DeviceID_
@@ -61,7 +62,9 @@ foreign import ccall "&" clReleaseContext :: Releaser Context_
 
 -- Note: be careful of races if the child is a ForeignPtr.  (See clQueueContext).
 retainedCLContext :: Ptr () -> IO Context
-retainedCLContext p = clRetainContext p >> newContext p
+retainedCLContext p = clRetainContext p >> newContext' p
+
+newContext' = newData Context clReleaseContext
 
 -- Being careful of race conditions:
 -- The foreignptr points back to the context, and if it's GC'd
@@ -121,11 +124,6 @@ withEvents :: [Event] -> ((CUInt, Ptr (Ptr ())) -> IO a) -> IO a
 withEvents [] g = g (0,nullPtr) -- required by OpenCL spec
 withEvents es g = withMany withEvent es $ \ps ->
                     withArrayLen ps $ \len p_ps -> g (toEnum len, p_ps)
-
-newEvent :: Ptr (Ptr ()) -> IO Event
-newEvent p = peek p >>= newData Event clReleaseEvent
-
-foreign import ccall "&" clReleaseEvent :: Releaser Event_
 
 
 ---------

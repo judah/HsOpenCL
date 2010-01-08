@@ -15,9 +15,9 @@ import Control.Monad.Trans
 import Data.Array.CArray
 import Data.Array.IOCArray
 import Data.Array.CArray.Base
-import Control.Concurrent
 import Foreign.ForeignPtr
 import Foreign.Storable
+import Control.Applicative
 
 -- Give the type-checker some hints, since functions like newArray
 -- are polymorphic.  This seems less messy than a bunch of ScopedTypeVariable
@@ -28,41 +28,31 @@ asCArray = id
 asIOCArray :: m (IOCArray i a) -> m (IOCArray i a)
 asIOCArray = id
 
-enqueueWithFree :: IO a -> Command -> CommandQueue -> [Event] -> IO Event
-enqueueWithFree act f q es = do
-    e <- runCommand f q es
-    forkIO $ myWait e >> act >> return ()
-    return e
-
-myWait :: Event -> IO ()
-myWait e = do
-    stat <- getEventCommandExecutionStatus e
-    case stat of
-        Complete -> return ()
-        _ -> threadDelay time >> myWait e
-
 time = 10000
 iocarraySize (IOCArray _ _ n _) = n
 
 instance (Ix i) => CopyTo (IOCArray i) Slice where
     a =: b
         | iocarraySize a < sizeS b = error "Copying too big!"
-        | otherwise = Command $ \q es -> withIOCArray a $ \p ->
-                enqueueWithFree (touchIOCArray a) (p =: b) q es
+        | otherwise = Command $ \q es ep -> withIOCArray a $ \p ->
+                (>>touchIOCArray a) <$> 
+                        runCommand (p =: b) q es ep
 
 instance (Ix i) => CopyTo Slice (IOCArray i) where
     b =: a
         | iocarraySize a > sizeS b = error "Copying too big!"
-        | otherwise = Command $ \q es -> withIOCArray a $ \p ->
-                enqueueWithFree (touchIOCArray a) (b =: p) q es
+        | otherwise = Command $ \q es ep -> withIOCArray a $ \p -> do
+                (>>touchIOCArray a) <$> 
+                    runCommand (b =: p) q es ep
 
 -- TODO: is this actually safe w/ the touching?
 instance (Ix i) => CopyTo Slice (CArray i) where
     b =: a = case toForeignPtr a of
             (n,fp)
                 | n > sizeS b -> error "Copying too big!"
-                | otherwise -> Command $ \q es -> withForeignPtr fp $ \p ->
-                    enqueueWithFree (touchForeignPtr fp) (b =: p) q es
+                | otherwise -> Command $ \q es ep -> withForeignPtr fp $ \p -> do
+                    (>>touchForeignPtr fp)
+                        <$> runCommand (b =: p) q es ep
 
 instance Ix i => CopyTo (IOCArray i) Buffer where
     a =: b = a =: asSlice b
@@ -77,5 +67,5 @@ copyToCArray :: forall m i e . (Ix i, Storable e, MonadQueue m)
                     => (i,i) -> Buffer e -> m (CArray i e)
 copyToCArray bounds b = do
     a <- liftIO $ newArray_ bounds
-    waitForCommand $ a =: b
+    waitForCommands_ [ a =: b]
     liftIO $ unsafeFreezeIOCArray a

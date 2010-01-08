@@ -3,8 +3,6 @@ module OpenCL.CommandQueue(
                 CommandQueue,
                 CommandQueueProperty(..),
                 createCommandQueue,
-                flush,
-                finish,
                 -- * The Queue monad
                 runQueueForType,
                 runQueueForDevice,
@@ -12,12 +10,15 @@ module OpenCL.CommandQueue(
                 getContext,
                 getDevice,
                 setProperties,
+                -- flush,
+                -- finish,
                 -- ** Commands
                 Command(..),
-                enqueue,
+                -- waitingFor,
                 waitForCommand,
                 waitForCommands,
-                commandWith,
+                waitForCommands_,
+                mkCommand,
                 -- * Querying info and properties
                 queueDevice,
                 queueContext,
@@ -25,16 +26,17 @@ module OpenCL.CommandQueue(
                 setQueueProperties,
                 -- * Events
                 Event,
-                waitForEvents,
-                waitForEvent,
+                -- waitForEvents,
+                -- waitForEvent,
+                -- ** Lower-level
                 eventCommandQueue,
                 CommandType(..),
                 eventCommandType,
                 getEventCommandExecutionStatus,
                 ExecutionStatus(..),
-                enqueueMarker,
-                enqueueWaitForEvents,
-                enqueueBarrier,
+                -- enqueueMarker,
+                -- enqueueWaitForEvents,
+                -- enqueueBarrier,
                 -- ** Profiling
                 getCommandQueued,
                 getCommandSubmit,
@@ -68,16 +70,6 @@ newCommandQueue :: Ptr () -> IO CommandQueue
 newCommandQueue = newData CommandQueue clReleaseCommandQueue
 foreign import ccall "&" clReleaseCommandQueue :: Releaser CommandQueue_
 
-{#fun clFlush as flush
-  { withCommandQueue* `CommandQueue'
-  } -> `Int' checkSuccess-
-#}
-
-{#fun clFinish as finish
-  { withCommandQueue* `CommandQueue'
-  } -> `Int' checkSuccess-
-#}
-
 ---------------
 -- Properties
 #c
@@ -104,9 +96,11 @@ enum CLCommandQueueInfo {
 -- So make sure the CommandQueue stays alive throughout.
 queueContext :: CommandQueue -> Context
 queueContext q@(CommandQueue fp)
-    = unsafePerformIO $ withForeignPtr fp $ \_ ->
-            getProp (getInfo q CLQueueContext)
-                >>= retainedCLContext
+    = unsafePerformIO $ withForeignPtr fp $ \_ -> do
+        p <- getProp (getInfo q CLQueueContext)
+        c <- retainedCLContext p
+        -- contextRefCount c >>= \n -> print ("Context-ref:",p,n)
+        return c
 
 queueDevice :: CommandQueue -> DeviceID
 queueDevice q = DeviceID $ getPureProp $ getInfo q CLQueueDevice
@@ -220,28 +214,67 @@ getEventCommandExecutionStatus e = toEnum <$>
 
 
 -------
-newtype Command = Command {runCommand :: CommandQueue -> [Event] -> IO Event}
+-- TODO: just Command {finalize :: IO, runCommand :: ...->IO Event}???
+newtype Command = Command {runCommand :: CommandQueue ->
+                            [Event] -> Ptr (Ptr ()) -> IO (IO ())}
 
-enqueue :: MonadQueue m => Command -> m Event
-enqueue f = do
-    q <- getQueue
-    liftIO $ runCommand f q []
+-- TODO: data EventPtr to wrap the Ptr (Ptr ())?
+
+mkCommand :: (CommandQueue -> [Event] -> Ptr (Ptr ()) -> IO ())
+                    -> Command
+mkCommand f = Command $ \q es e -> f q es e >> return (return ())
 
 waitingFor :: [Event] -> Command -> Command
-waitingFor es (Command f) = Command $ \q es' -> f q (es++es')
+waitingFor es (Command f) = Command $ \q es' e -> f q (es++es') e
 
-waitForCommand :: MonadQueue m => Command -> m ()
-waitForCommand c = waitForCommands [c]
+-- TODO: What happens if we use waitForEvents instead of finish?
+waitForCommands :: MonadQueue m => [Command] -> m [Event]
+waitForCommands cs = do
+    q <- getQueue
+    -- TODO: is the other way really faster?
+    -- (es,fs) <- liftM unzip $ liftIO $ loop q [] cs
+    (es,fs) <- liftM unzip $ liftIO $ forM cs $ \c -> do
+                        alloca $ \p -> do
+                                f <- runCommand c q [] p
+                                e <- peek p >>= newEvent
+                                return (e,f)
+    finish
+    liftIO $ sequence_ fs
+    return $ reverse es
+  where
+    loop q es [] = return es
+    loop q es (c:cs) = do
+        ef <- alloca $ \p -> do
+                f <- runCommand c q [] p
+                e <- peek p >>= newEvent
+                return (e,f)
+        loop q (ef:es) cs
 
-waitForCommands :: MonadQueue m => [Command] -> m ()
-waitForCommands cs = mapM enqueue cs >>= waitForEvents
+newEvent :: Ptr () -> IO Event
+newEvent = newData Event clReleaseEvent
 
-commandWith :: ( (a -> IO Event) -> IO Event) -> (a -> Command) -> Command
-commandWith f g = Command $ \q es -> f $ \x -> case g x of
-                                Command g' -> g' q es
+foreign import ccall "&" clReleaseEvent :: Releaser Event_
 
+
+waitForCommands_ :: MonadQueue m => [Command] -> m ()
+waitForCommands_ cs = do
+    q <- getQueue
+    fs <- liftIO $ loop q (return ()) cs
+    finish
+    liftIO fs
+  where
+    loop q fs [] = return fs
+    -- TODO: time with both f>>fs and f:fs, and see which is fastest.
+    loop q fs (c:cs) = runCommand c q [] nullPtr >>= \f -> loop q (f>>fs) cs
+
+
+waitForCommand :: MonadQueue m => Command -> m Event
+waitForCommand c = do
+    [e] <- waitForCommands [c]
+    return e
 
 --------------------------
+{-
 
 -- how would this fit in?
 -- return a "wait for event" marker?
@@ -261,6 +294,8 @@ commandWith f g = Command $ \q es -> f $ \x -> case g x of
   { withCommandQueue* `CommandQueue'
   } -> `Int' checkSuccess-
 #}
+
+-}
 
 -----------------
 -- Profiling
@@ -321,3 +356,19 @@ runQueueForContext :: MonadIO m => DeviceID -> Context -> QueueT m a -> m a
 runQueueForContext dev cxt f = do
     queue <- liftIO $ createCommandQueue cxt dev []
     runQueueT f queue
+
+{#fun clFlush
+  { withCommandQueue* `CommandQueue'
+  } -> `Int' checkSuccess-
+#}
+
+flush :: MonadQueue m => m ()
+flush = getQueue >>= liftIO . clFlush
+
+{#fun clFinish
+  { withCommandQueue* `CommandQueue'
+  } -> `Int' checkSuccess-
+#}
+
+finish :: MonadQueue m => m ()
+finish = getQueue >>= liftIO . clFinish

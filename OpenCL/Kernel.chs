@@ -119,31 +119,31 @@ x &: xs = SomeArg x : xs
   , id `Ptr CULong' -- global work size
   , id `Ptr CULong' -- local work size
   , withEvents* `[Event]'&
-  , alloca- `Event' newEvent*
+  , id `Ptr (Ptr ())'
   } -> `Int' checkSuccess-
 #}
 
 ndRangeKernel :: NDRange d => Kernel -> d -> Maybe d -> Command
 ndRangeKernel kernel global local
-    = Command $ runKernel' kernel global local
+    = mkCommand $ runKernel' kernel global local
 
 -- TODO: check # of args with getinfo
 runKernelWithArgs :: NDRange d => Kernel -> d -> Maybe d
                         -> [SomeArg] -> Command
-runKernelWithArgs k global local as = Command $ \q es -> let
-            loop _ [] = runKernel' k global local q es
+runKernelWithArgs k global local as = mkCommand $ \q es ep -> let
+            loop _ [] = runKernel' k global local q es ep
             loop c (SomeArg x:xs) = withKernelArg x $ \n p -> do
                             clSetKernelArg k c n p
                             loop (c+1) xs
             in loop 0 as
 
 runKernel' :: NDRange d => Kernel -> d -> Maybe d
-            -> CommandQueue -> [Event] -> IO Event
-runKernel' kernel globalWorkSize localWorkSize queue es
+            -> CommandQueue -> [Event] -> Ptr (Ptr ()) -> IO ()
+runKernel' kernel globalWorkSize localWorkSize queue es ep
        = withArrayLen gsizes $ \dim globalSizes ->
           withLocalSizeArray dim $ \localSizes ->
             clEnqueueNDRangeKernel queue kernel dim nullPtr
-                    globalSizes localSizes es
+                    globalSizes localSizes es ep
   where
     gsizes = rangeDims globalWorkSize
     withLocalSizeArray dim = case localWorkSize of
@@ -182,13 +182,13 @@ instance Integral a => NDRange (a,a,a) where
  { withCommandQueue* `CommandQueue'
  , withKernel* `Kernel'
   , withEvents* `[Event]'&
-  , alloca- `Event' newEvent*
+  , id `Ptr (Ptr ())'
  } -> `Int' checkSuccess-
 #}
 
 
 task :: Kernel -> Command
-task kernel = Command $ \queue -> clEnqueueTask queue kernel
+task kernel = mkCommand $ \queue -> clEnqueueTask queue kernel
 ---------
 -- Queries
 
