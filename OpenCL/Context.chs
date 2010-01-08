@@ -53,7 +53,7 @@ createContextFromType dtype = clCreateContextFromType nullPtr
 -- The only really interesting property is the devices, for now.
 #c
 enum CLContextInfo {
-    CLContextRefenceCount = CL_CONTEXT_REFERENCE_COUNT,
+    CLContextReferenceCount = CL_CONTEXT_REFERENCE_COUNT,
     CLContextDevices = CL_CONTEXT_DEVICES,
     CLContextProperties = CL_CONTEXT_PROPERTIES
 };
