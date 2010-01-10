@@ -63,7 +63,7 @@ createKernelsInProgram prog = liftIO $
   , `Int'
   , `Int'
   , castPtr `Ptr a'
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 -- API TODO
@@ -120,7 +120,7 @@ x &: xs = SomeArg x : xs
   , id `Ptr CULong' -- local work size
   , withEvents* `[Event]'&
   , id `Ptr (Ptr ())'
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 ndRangeKernel :: NDRange d => Kernel -> d -> Maybe d -> Command
@@ -183,7 +183,7 @@ instance Integral a => NDRange (a,a,a) where
  , withKernel* `Kernel'
   , withEvents* `[Event]'&
   , id `Ptr (Ptr ())'
- } -> `Int' checkSuccess-
+ } -> `Int' checkSuccess*-
 #}
 
 

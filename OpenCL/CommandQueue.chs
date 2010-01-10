@@ -117,7 +117,7 @@ getQueueProperties queue = getFlags (getInfo queue CLQueueProperties)
   , `Bool'
   , castPtr `Ptr ()' -- Ignoring the return value of old properties,
                 -- since it can be extracted by clGetCommandQueueInfo.
-  } -> `CLInt' checkSuccess-
+  } -> `CLInt' checkSuccess*-
 #}
 
 setQueueProperties :: CommandQueue -> [CommandQueueProperty]
@@ -130,7 +130,7 @@ setQueueProperties queue props bool
 
 {#fun clWaitForEvents
   { withEvents* `[Event]'&
-  } -> `CLInt' checkSuccess-
+  } -> `CLInt' checkSuccess*-
 #}
 
 waitForEvents :: MonadIO m => [Event] -> m ()
@@ -281,18 +281,18 @@ waitForCommand c = do
 {#fun clEnqueueMarker as enqueueMarker
   { withCommandQueue* `CommandQueue'
   , alloca- `Event' newEvent*
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 {#fun clEnqueueWaitForEvents as enqueueWaitForEvents
   { withCommandQueue* `CommandQueue'
   , withEvents* `[Event]'&
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 {#fun clEnqueueBarrier as enqueueBarrier
   { withCommandQueue* `CommandQueue'
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 -}
@@ -359,7 +359,7 @@ runQueueForContext dev cxt f = do
 
 {#fun clFlush
   { withCommandQueue* `CommandQueue'
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 flush :: MonadQueue m => m ()
@@ -367,7 +367,7 @@ flush = getQueue >>= liftIO . clFlush
 
 {#fun clFinish
   { withCommandQueue* `CommandQueue'
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 finish :: MonadQueue m => m ()

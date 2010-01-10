@@ -138,7 +138,7 @@ blockingFlag NonBlocking = 0
   , castPtr `Ptr a'
   , withEvents* `[Event]'&
   , id `Ptr (Ptr ())'
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 readBuffer :: forall a . Storable a
@@ -160,7 +160,7 @@ readBuffer mem block offset size p
   , castPtr `Ptr a'
   , withEvents* `[Event]'&
   , id `Ptr (Ptr ())'
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 writeBuffer :: forall a . Storable a => Buffer a -> IsBlocking
@@ -181,7 +181,7 @@ writeBuffer mem blocking offset size p
   , `Int'
   , withEvents* `[Event]'&
   , id `Ptr (Ptr ())'
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 copyBuffer :: forall a . Storable a
@@ -257,7 +257,7 @@ foreign import ccall "&" clReleaseMemObject :: Releaser m
 
 {#fun clReleaseMemObject as releaseMemObject
   { id `Ptr ()'
-  } -> `Int' checkSuccess-
+  } -> `Int' checkSuccess*-
 #}
 
 
