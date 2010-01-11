@@ -31,14 +31,14 @@ main = runQueueForType DeviceTypeGPU $ do
     b :: IOCArray Int Float <- newListArray bounds [n-1,n-2..0]
     results :: IOCArray Int Float <- newArray_ bounds
     -- Allocate the device memory, and copy the data manually:
-    withBuffer MemReadOnly NoHostPtr size $ \aMem -> do
-    withBuffer MemReadOnly NoHostPtr size $ \bMem -> do
-    withBuffer MemReadWrite NoHostPtr size $ \ansMem -> do
+    allocaBuffer MemReadOnly NoHostPtr size $ \aMem -> do
+    allocaBuffer MemReadOnly NoHostPtr size $ \bMem -> do
+    allocaBuffer MemReadWrite NoHostPtr size $ \ansMem -> do
     waitForCommands [aMem =: a, bMem =: b]
     -- Run the kernel:
-    eKernel <- enqueue (runKernel kernel size Nothing
-                                aMem bMem (2::Float) ansMem)
-    waitForEvent eKernel
+    eKernel <- waitForCommand
+                $ runKernel kernel size Nothing
+                                aMem bMem (2::Float) ansMem
     -- Print out the results:
     waitForCommand (results =: ansMem)
     liftIO $ do
