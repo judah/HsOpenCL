@@ -1,4 +1,4 @@
-module OpenCL.Simple(
+module System.HsOpenCL.Simple(
             SimpleProgram(..),
             DeviceType(..),
             newSimpleProgram,
@@ -8,7 +8,7 @@ module OpenCL.Simple(
             )
              where
 
-import OpenCL hiding (KernelArg, KernelFunc)
+import System.HsOpenCL hiding (KernelArg, KernelFunc)
 import Data.Array.CArray
 import Data.Array.IOCArray
 import Data.Array.CArray.Base(unsafeFreezeIOCArray, IOCArray(..))

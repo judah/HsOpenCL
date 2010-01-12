@@ -1,16 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module OpenCL.Context(
+module System.HsOpenCL.Context(
                     Context,
                     createContext,
                     createContextFromType,
                     contextDevices,
                         ) where
 
-import OpenCL.Error
+import System.HsOpenCL.Error
 #include <OpenCL/OpenCL.h>
-import OpenCL.Internal.Types
-import OpenCL.Internal.C2HS
-import OpenCL.Platform.Foreign
+import System.HsOpenCL.Internal.Types
+import System.HsOpenCL.Internal.C2HS
+import System.HsOpenCL.Platform.Foreign
 
 import Control.Applicative
 

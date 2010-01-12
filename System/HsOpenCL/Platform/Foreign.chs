@@ -1,11 +1,11 @@
-module OpenCL.Platform.Foreign where
+module System.HsOpenCL.Platform.Foreign where
 
 #include <OpenCL/OpenCL.h>
 
 
-import OpenCL.Internal.C2HS
-import OpenCL.Error
-import OpenCL.Internal.Types
+import System.HsOpenCL.Internal.C2HS
+import System.HsOpenCL.Error
+import System.HsOpenCL.Internal.Types
 
 import Control.Applicative
 

@@ -1,4 +1,4 @@
-module OpenCL.Program(Program,
+module System.HsOpenCL.Program(Program,
                     createProgramWithSource,
                     createProgramWithBinary,
                     buildProgram,
@@ -19,12 +19,12 @@ module OpenCL.Program(Program,
                 ) where
 
 #include <OpenCL/OpenCL.h>
-import OpenCL.Internal.Types
-import OpenCL.Internal.C2HS
-import OpenCL.Error
-import OpenCL.Platform() -- for Show instance of DeviceID
-import OpenCL.MonadQueue
-import OpenCL.CommandQueue
+import System.HsOpenCL.Internal.Types
+import System.HsOpenCL.Internal.C2HS
+import System.HsOpenCL.Error
+import System.HsOpenCL.Platform() -- for Show instance of DeviceID
+import System.HsOpenCL.MonadQueue
+import System.HsOpenCL.CommandQueue
 
 import Control.Exception
 import Control.Applicative

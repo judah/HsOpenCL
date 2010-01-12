@@ -16,21 +16,21 @@ build-type:          Simple
 ghc-options:         
 build-tools: c2hs
 exposed-modules:
-    OpenCL.Error
-    OpenCL.Platform
-    OpenCL.Context
-    OpenCL.Program
-    OpenCL.MonadQueue
-    OpenCL.CommandQueue
-    OpenCL.Kernel
-    OpenCL.Memory
-    OpenCL
-    OpenCL.Instances.CArray
-    OpenCL.TH
+    System.HsOpenCL.Error
+    System.HsOpenCL.Platform
+    System.HsOpenCL.Context
+    System.HsOpenCL.Program
+    System.HsOpenCL.MonadQueue
+    System.HsOpenCL.CommandQueue
+    System.HsOpenCL.Kernel
+    System.HsOpenCL.Memory
+    System.HsOpenCL
+    System.HsOpenCL.Instances.CArray
+    System.HsOpenCL.TH
 other-modules:
-    OpenCL.Internal.C2HS
-    OpenCL.Internal.Types
-    OpenCL.Platform.Foreign
+    System.HsOpenCL.Internal.C2HS
+    System.HsOpenCL.Internal.Types
+    System.HsOpenCL.Platform.Foreign
 extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
             ScopedTypeVariables, GADTs, MultiParamTypeClasses
             TypeSynonymInstances, FlexibleInstances, OverlappingInstances

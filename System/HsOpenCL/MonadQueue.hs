@@ -1,11 +1,11 @@
-module OpenCL.MonadQueue(QueueT(..)
+module System.HsOpenCL.MonadQueue(QueueT(..)
                         , QueueIO
                         , MonadBracket(..)
                         , MonadQueue(..)
                         , module Control.Monad.Trans
                         ) where
 
-import OpenCL.Internal.Types
+import System.HsOpenCL.Internal.Types
 
 import Control.Monad.Trans
 import Data.Ix

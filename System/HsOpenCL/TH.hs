@@ -1,4 +1,4 @@
-module OpenCL.TH(declareKernelsFromFile
+module System.HsOpenCL.TH(declareKernelsFromFile
             , declareKernels
             , clProg
             ) where
@@ -12,11 +12,11 @@ import Control.Monad
 import qualified Data.ByteString.Char8 as B
 import System.IO.Unsafe
 
-import OpenCL.Program
-import OpenCL.Kernel
-import OpenCL.MonadQueue
-import OpenCL.CommandQueue
-import OpenCL.Memory
+import System.HsOpenCL.Program
+import System.HsOpenCL.Kernel
+import System.HsOpenCL.MonadQueue
+import System.HsOpenCL.CommandQueue
+import System.HsOpenCL.Memory
 
 {-
 This module declares Template Haskell commands for automatically

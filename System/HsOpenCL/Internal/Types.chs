@@ -1,4 +1,4 @@
-module OpenCL.Internal.Types where
+module System.HsOpenCL.Internal.Types where
 
 #include <OpenCL/OpenCL.h>
 
@@ -7,8 +7,8 @@ import Foreign.C
 import Control.Applicative
 import Control.Monad
 
-import OpenCL.Error
-import OpenCL.Internal.C2HS
+import System.HsOpenCL.Error
+import System.HsOpenCL.Internal.C2HS
 
 import Data.ByteString.Char8 (ByteString, unpack)
 import Data.ByteString.Unsafe(unsafePackMallocCString)

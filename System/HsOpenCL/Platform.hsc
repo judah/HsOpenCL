@@ -1,4 +1,4 @@
-module OpenCL.Platform(
+module System.HsOpenCL.Platform(
             -- * Platforms
             PlatformID,
             getPlatformIDs,
@@ -76,10 +76,10 @@ module OpenCL.Platform(
 import Control.Applicative
 import Data.Bits
 
-import OpenCL.Internal.C2HS
-import OpenCL.Error
-import OpenCL.Internal.Types
-import OpenCL.Platform.Foreign
+import System.HsOpenCL.Internal.C2HS
+import System.HsOpenCL.Error
+import System.HsOpenCL.Internal.Types
+import System.HsOpenCL.Platform.Foreign
 
 getPlatformIDs :: IO [PlatformID]
 getPlatformIDs = map PlatformID <$> getObjArray clGetPlatformIDs

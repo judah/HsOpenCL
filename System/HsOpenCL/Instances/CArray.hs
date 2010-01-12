@@ -1,4 +1,4 @@
-module OpenCL.Instances.CArray(
+module System.HsOpenCL.Instances.CArray(
         asCArray,
         asIOCArray,
         copyToCArray
@@ -6,10 +6,10 @@ module OpenCL.Instances.CArray(
 
 -- helper instances for using CArrays.
 
-import OpenCL.Kernel
-import OpenCL.Memory
-import OpenCL.CommandQueue
-import OpenCL.MonadQueue
+import System.HsOpenCL.Kernel
+import System.HsOpenCL.Memory
+import System.HsOpenCL.CommandQueue
+import System.HsOpenCL.MonadQueue
 
 import Control.Monad.Trans
 import Data.Array.CArray

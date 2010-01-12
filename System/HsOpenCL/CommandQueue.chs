@@ -1,4 +1,4 @@
-module OpenCL.CommandQueue(
+module System.HsOpenCL.CommandQueue(
                 -- * Command queues
                 CommandQueue,
                 CommandQueueProperty(..),
@@ -45,13 +45,13 @@ module OpenCL.CommandQueue(
                 ) where
 
 #include <OpenCL/OpenCL.h>
-import OpenCL.Internal.Types
-import OpenCL.Internal.C2HS
-import OpenCL.Error
-import OpenCL.MonadQueue
-import OpenCL.Context
-import OpenCL.Platform
-import OpenCL.Platform.Foreign(CommandQueueProperty(..))
+import System.HsOpenCL.Internal.Types
+import System.HsOpenCL.Internal.C2HS
+import System.HsOpenCL.Error
+import System.HsOpenCL.MonadQueue
+import System.HsOpenCL.Context
+import System.HsOpenCL.Platform
+import System.HsOpenCL.Platform.Foreign(CommandQueueProperty(..))
 
 import Control.Applicative
 import Control.Monad

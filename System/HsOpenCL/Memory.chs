@@ -1,4 +1,4 @@
-module OpenCL.Memory(
+module System.HsOpenCL.Memory(
                 -- * Memory objects
                 MemObject(),
                 MemAccessFlag(..),
@@ -29,12 +29,12 @@ module OpenCL.Memory(
                 ) where
 
 #include <OpenCL/OpenCL.h>
-import OpenCL.Internal.Types
-import OpenCL.Internal.C2HS
-import OpenCL.CommandQueue(Command(..))
-import OpenCL.Error
-import OpenCL.MonadQueue
-import OpenCL.CommandQueue
+import System.HsOpenCL.Internal.Types
+import System.HsOpenCL.Internal.C2HS
+import System.HsOpenCL.CommandQueue(Command(..))
+import System.HsOpenCL.Error
+import System.HsOpenCL.MonadQueue
+import System.HsOpenCL.CommandQueue
 import Data.Maybe
 import Control.Applicative
 import Control.Exception
