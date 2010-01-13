@@ -71,23 +71,47 @@ createKernelsInProgram prog = liftIO $
 class KernelArg a where
     withKernelArg :: a -> (Int -> Ptr () -> IO b) -> IO b
 
+withScalarArg :: Storable a => a -> (Int -> Ptr () -> IO b) -> IO b
+withScalarArg x f = with x $ \p -> f (sizeOf x) (castPtr p)
+
 instance KernelArg (Buffer a) where
     -- buffers are set the same as a scalar pointer would be.
-    withKernelArg b f = withBuffer b $ \p -> withKernelArg (Scalar p) f
+    withKernelArg b f = withBuffer b $ \p -> withScalarArg p f
 
 -- newtype eliminates need for UndecidableInstances
 -- | A scalar argument, such as @float x@.
 newtype Scalar a = Scalar a
 instance Storable a => KernelArg (Scalar a) where
-    withKernelArg (Scalar a) f = with a $ \p -> f (sizeOf a) (castPtr p)
+    withKernelArg (Scalar x) = withScalarArg x
 
--- TODO: more instances, and double-check the marshalling.
--- then, get rid of Scalar altogether.
+-- TODO: Foreign.C types?
+instance KernelArg Int8 where
+    withKernelArg = withScalarArg
+
+instance KernelArg Int16 where
+    withKernelArg = withScalarArg
+
+instance KernelArg Int32 where
+    withKernelArg = withScalarArg
+
+instance KernelArg Int64 where
+    withKernelArg = withScalarArg
+
+instance KernelArg Word8 where
+    withKernelArg = withScalarArg
+
+instance KernelArg Word16 where
+    withKernelArg = withScalarArg
+
+instance KernelArg Word32 where
+    withKernelArg = withScalarArg
+
+instance KernelArg Word64 where
+    withKernelArg = withScalarArg
+
+-- Float on modern platforms is IEEE, so this should be safe.
 instance KernelArg Float where
-    withKernelArg x = withKernelArg (Scalar x)
-
-instance KernelArg Int where
-    withKernelArg x = withKernelArg (Scalar (toEnum x::CInt))
+    withKernelArg = withScalarArg
 
 -- | A specification of a variable which is allocated in local memory and
 -- shared by all work-items of a work-group.  For example: @__local float *x@.

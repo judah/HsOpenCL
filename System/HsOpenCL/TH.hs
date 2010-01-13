@@ -12,6 +12,9 @@ import Control.Monad
 import qualified Data.ByteString.Char8 as B
 import System.IO.Unsafe
 
+import Data.Int
+import Data.Word
+
 import System.HsOpenCL.Program
 import System.HsOpenCL.Kernel
 import System.HsOpenCL.MonadQueue
@@ -147,8 +150,16 @@ vars.  (For now, ignore it I guess.)
 -- better marshalling.
 -- esp. Int vs uint etc...
 scalarTypes :: [(String,Type)]
-scalarTypes = [ ("float",ConT ''Float)
-              , ("int",ConT ''Int)]
+scalarTypes = [ ("char",ConT ''Int8)
+              , ("short",ConT ''Int16)
+              , ("int",ConT ''Int32)
+              , ("long",ConT ''Int64)
+              , ("uchar",ConT ''Word8)
+              , ("ushort",ConT ''Word16)
+              , ("uint",ConT ''Word32)
+              , ("ulong",ConT ''Word64)
+              , ("float",ConT ''Float)
+              ]
 
 -- Search for:
 -- __kernel (or kernel) followed by void followed by name then "("
@@ -257,8 +268,11 @@ ident = tok $ liftM2 (:) identNonDigit (many identChar)
 typeIdent :: Parser Type
 typeIdent = do
     n <- ident
-    case lookup n scalarTypes of
-        Nothing -> fail $ "bad type: " ++ show n
+    n' <- if n=="unsigned"
+            then ('u':) <$> ident
+            else return n
+    case lookup n' scalarTypes of
+        Nothing -> fail $ "bad type: " ++ show n'
         Just t -> return t
     
 
