@@ -1,14 +1,18 @@
 {-# LANGUAGE ScopedTypeVariables, QuasiQuotes#-}
 module Main where
 
-import OpenCL
-import OpenCL.Instances.CArray
+import System.HsOpenCL
+import System.HsOpenCL.Instances.CArray
 
 import qualified Data.ByteString as B
 import Data.Array.CArray
 import Data.Array.IOCArray
 
 import System.Environment
+import Control.Monad
+import Data.Word
+import Data.List
+import Text.Printf
 
 myprog = [$clProg|
             __kernel void add(__global float *a, __global float *b,
@@ -36,24 +40,18 @@ main = runQueueForType DeviceTypeGPU $ do
     allocaBuffer MemReadWrite NoHostPtr size $ \ansMem -> do
     waitForCommands [aMem =: a, bMem =: b]
     -- Run the kernel:
-    eKernel <- waitForCommand
+    let numTests = 50
+    eKernels <- waitForCommands $ replicate numTests
                 $ runKernel kernel size Nothing
                                 aMem bMem (2::Float) ansMem
+    times <- liftIO $ forM eKernels $ \e -> liftM2 (-) (getCommandEnd e) (getCommandStart e)
     -- Print out the results:
     waitForCommand (results =: ansMem)
     liftIO $ do
-        statEvent eKernel
         putStrLn "First 10 results are:"
         mapM (readArray results) [0..9] >>= print
+        let ave = foldl1' (+) (map cvtTime times) / toEnum numTests
+        printf "Average kernel run time: %.5f seconds" ave
 
-statEvent e = do
-    putStrLn "Kernel timings:"
-    putStr "Queued: " >> getCommandQueued e >>= print
-    putStr "Submit: " >> getCommandSubmit e >>= print
-    start <- getCommandStart e
-    end <- getCommandEnd e
-    putStrLn $ "Start: " ++ show start
-    putStrLn $ "End: " ++ show end
-    putStrLn $ "Duration: " ++ show (end-start)
-    putStrLn ""
-    
+cvtTime :: Word64 -> Double
+cvtTime w = fromIntegral w / 10^9
