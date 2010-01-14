@@ -1,12 +1,25 @@
 {-# LANGUAGE TemplateHaskell #-}
-module DeviceProperties where
+module Main where
 
-import OpenCL
+import System.HsOpenCL
 
 import Language.Haskell.TH
 
-allNames :: [Name]
-allNames = [
+
+main = getDeviceIDs DeviceTypeAll Nothing >>= mapM_ printAttrs
+  where
+    printAttr d (n,f) = putStrLn $ n ++ ": " ++ f d
+    printAttrs d = do
+        putStrLn $ "------" ++ deviceName d ++ "-----"
+        mapM_ (printAttr d) propList
+        putStrLn ""
+
+
+-- Making one large splice so we can fit this in one file
+-- without falling afoul of GHC's stage restrictions.
+propList = $(let
+        mkNamePair n = tupE [stringE (nameBase n), appE [|(show .)|] (varE n)]
+        allNames = [
             'deviceType
             , 'deviceVendorId
             ,'deviceMaxComputeUnits
@@ -59,8 +72,7 @@ allNames = [
             ,'devicePlatform
             ]
 
-genPropList :: ExpQ
-genPropList = listE $ map mkNamePair allNames
-  where
-    mkNamePair n = tupE [stringE (nameBase n), appE [|(show .)|] (varE n)]
+        in listE $ map mkNamePair allNames
+        )
+
 
