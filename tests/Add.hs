@@ -1,17 +1,19 @@
 {-# LANGUAGE TemplateHaskell,QuasiQuotes, Rank2Types #-}
-module Main where
+--
+-- To run, use e.g. "runghc Add.hs 1024"
 
-import OpenCL
-import OpenCL.Instances.CArray
+import System.HsOpenCL
+import System.HsOpenCL.Instances.CArray
 import System.Environment
 import Foreign
 
-import Data.Array.CArray
-import Data.Array.IOCArray
+import Data.Array.CArray (listArray, elems)
+import Data.Array.IOCArray (newListArray)
 import System.IO
+import Data.List (findIndices)
 
--- declareKernelsFromFile "prog" "test_prog.cl"
-declareKernels "ProgAdd" [$clProg| __kernel void
+-- declareKernelsFromFile "Adder" "test_prog.cl"
+declareKernels "Adder" [$clProg| __kernel void
             add(__global float *a,__global float *b, __global float *answer)
             {
 	        int gid = get_global_id(0);
@@ -25,32 +27,31 @@ main = do
     runQueueForType DeviceTypeGPU $ do
     let size = read ns
     let n = toEnum size
-    -- Allocate host memory:
+    -- Allocate host memory; this can be either pure or impure.
     let bounds = (0,size-1)
+    liftIO $ putStrLn $ "Array bounds: " ++ show bounds
     let a = asCArray $ listArray bounds [0..n-1]
     b <- asIOCArray $ newListArray bounds [n-1,n-2..0]
-    results <- asIOCArray $ newArray_ bounds
     -- Allocate device memory:
+    -- Either allocaBuffer or newBuffer will work for this example.
     allocaBuffer MemReadOnly NoHostPtr size $ \aMem -> do
     bMem <- newBuffer MemReadOnly NoHostPtr size
     allocaBuffer MemReadWrite NoHostPtr size $ \ansMem -> do
     -- Run the program:
-    prog <- buildProgAdd ""
+    prog <- buildAdder ""
     liftIO $ putStrLn "Running..."
     waitForCommands [aMem =: a, bMem =: b
                     , add prog size Nothing aMem bMem ansMem
-                    , results =: ansMem
                     ]
+    results <- copyToCArray bounds ansMem
     liftIO $ putStrLn "Done."
     liftIO $ do
+        let es = elems results
         putStrLn "First 10 results are:"
-        mapM (readArray results) [0..9] >>= print
-        let loopCheck n = if n == size then return ()
-                            else do
-                                x <- readArray results n
-                                if (x/=toEnum (size-1))
-                                    then error $ show ("bad entry:",x)
-                                    else loopCheck (n+1)
-        loopCheck 0
-
-
+        print $ take 10 es
+        let ok = (== (n-1))
+        if all ok es
+            then putStrLn "Test passed!"
+            else do
+                putStrLn "Test failed!"
+                putStrLn $ "Bad indices:" ++ show (findIndices (not . ok) es)
