@@ -1,6 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, QuasiQuotes #-}
-import OpenCL
-import MultiLine
+import System.HsOpenCL
 import qualified Data.ByteString as B
 import System.IO
 
@@ -46,9 +45,3 @@ printKernelInfo k = do
         ++ show (kernelCompileWorkGroupSize k dev)
     putStrLn "Local mem size:"
     getKernelLocalMemSize k dev >>= print
-    -- set an arg, and try the work group size again:
-    m :: Buffer Float <- createBuffer (kernelContext k)
-                                MemReadWrite NoHostPtr 1024
-    getKernelLocalMemSize k dev >>= print
-    setKernelArg k 0 m
-    putStrLn ""

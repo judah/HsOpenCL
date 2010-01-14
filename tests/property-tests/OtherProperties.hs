@@ -2,7 +2,8 @@
 module Main where
 
 import Foreign
-import OpenCL
+import System.HsOpenCL
+import Control.Exception
 
 main = do
     cxt <- createContextFromType DeviceTypeAll
@@ -11,28 +12,27 @@ main = do
     print (map deviceType devs)
     queue <- createCommandQueue cxt (head devs) [QueueProfilingEnable]
     testQueueInfos queue
-    testBufferInfos cxt
+    runQueueT testBufferInfos queue
 
 testQueueInfos q = do
     putStrLn "--- CLCommandQueue ---"
     print (queueDevice q)
     print (contextDevices (queueContext q))
     getQueueProperties q >>= print
-    setQueueProperties q [QueueOutOfOrderExecModeEnable] False
+    handle (\(e::SomeException) -> putStrLn $ "Got exception: " ++ show e)
+        $ setQueueProperties q [QueueOutOfOrderExecModeEnable] False
     getQueueProperties q >>= print
     setQueueProperties q [QueueProfilingEnable] False
     getQueueProperties q >>= print
 
-testBufferInfos cxt = do
+testBufferInfos = do
+    p :: Ptr Float <- liftIO $ newArray [1..10]
+    buf :: Buffer Float <- newBuffer MemReadOnly (CopyAllocHostPtr p) 5
+    buf2 :: Buffer Float <- newBuffer MemReadWrite (UseHostPtr p) 5
+    liftIO $ do
     putStrLn "--- Buffer ---"
-    p :: Ptr Float <- newArray [1..10]
     print p
-    buf :: Buffer Float <- createBuffer cxt MemReadOnly (CopyAllocHostPtr p) 5
-    getMemReferenceCount buf >>= print
-    retainMemObject buf
-    getMemReferenceCount buf >>= print
     putStrLn "Flags:"
     print $ memFlags buf
     print $ memSize buf
-    buf2 :: Buffer Float <- createBuffer cxt MemReadWrite (UseHostPtr p) 5
-    print $ memFlags buf
+    print $ memFlags buf2

@@ -1,21 +1,39 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-import OpenCL
+{-# LANGUAGE ScopedTypeVariables, QuasiQuotes #-}
+import System.HsOpenCL
 
 import qualified Data.ByteString as B
 import Control.Exception
 import Control.Monad
 
+test1 = [$clProg| __kernel void add(__global float *a,
+                                        __global float *b,
+                                        __global float *answer)
+                        {
+                            int gid = get_global_id(0);
+                            answer[gid] = a[gid] + b[gid];
+                        }
+            |]
+
+test2 = [$clProg| __kernel void mult2(__global float *x,
+                                        __global float *answer)
+                    {
+                        int gid = get_global_id(0);
+                        answer[gid] = 2*x[gid];
+                    }
+            |]
+
+test3 = [$clProg| junk akjdhfkasdhkjfh |]
+
 main = do
     putStrLn "---------\n------ bad build ------\n------\n"
-    testBuild ["test_prog.cl","test_prog_bad.cl","test_prog2.cl"]
+    testBuild [test1,test2,test3]
     putStrLn "---------\n------ good build ------\n------\n"
-    testBuild ["test_prog.cl","test_prog2.cl"]
+    testBuild [test1,test2]
     putStrLn "---------\n------ binary build ------\n------\n"
-    testBinaryBuild ["test_prog.cl"]
+    testBinaryBuild [test1]
 
-testBuild files = do
+testBuild bs = do
     cxt <- createContextFromType DeviceTypeAll
-    bs <- mapM B.readFile files
     prog <- createProgramWithSource cxt bs
     handle (handler prog) $ do
         buildProgram prog "-D foo"
@@ -27,10 +45,9 @@ testBuild files = do
         putStrLn "Got error:"
         print e
 
-testBinaryBuild files = do
+testBinaryBuild bs = do
     cxt <- createContextFromType DeviceTypeGPU
     let devs = contextDevices cxt
-    bs <- mapM B.readFile files
     prog <- createProgramWithSource cxt bs
     buildProgram prog ""
     bins <- getProgramBinaries prog
