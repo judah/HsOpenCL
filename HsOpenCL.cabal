@@ -18,7 +18,6 @@ build-tools: c2hs
 exposed-modules:
     System.HsOpenCL.Error
     System.HsOpenCL.Platform
-    System.HsOpenCL.Context
     System.HsOpenCL.Program
     System.HsOpenCL.MonadQueue
     System.HsOpenCL.CommandQueue

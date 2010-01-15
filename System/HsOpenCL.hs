@@ -1,7 +1,6 @@
 module System.HsOpenCL(
           module System.HsOpenCL.MonadQueue
           , module System.HsOpenCL.CommandQueue
-          , module System.HsOpenCL.Context
           , module System.HsOpenCL.Error
           , module System.HsOpenCL.Kernel
           , module System.HsOpenCL.Memory
@@ -12,7 +11,6 @@ module System.HsOpenCL(
 
 import System.HsOpenCL.CommandQueue
 import System.HsOpenCL.MonadQueue
-import System.HsOpenCL.Context
 import System.HsOpenCL.Error
 import System.HsOpenCL.Kernel
 import System.HsOpenCL.Memory

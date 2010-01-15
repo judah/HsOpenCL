@@ -12,6 +12,11 @@ module System.HsOpenCL.Platform(
             DeviceID,
             getDeviceID,
             getDeviceIDs,
+            -- * Contexts
+            Context,
+            createContext,
+            createContextFromType,
+            contextDevices,
             -- * Device properties
             Size,
             ULong, 
@@ -302,3 +307,18 @@ deviceGlobalMemCacheType d
 
 devicePlatform :: DeviceID -> PlatformID
 devicePlatform = PlatformID . castPtr . deviceInfo (#const CL_DEVICE_PLATFORM)
+
+---------------------------
+-- Contexts
+
+createContext :: [DeviceID] -> IO Context
+createContext devices = clCreateContext nullPtr devices nullFunPtr nullPtr
+
+createContextFromType :: DeviceType -> IO Context
+createContextFromType dtype = clCreateContextFromType nullPtr
+                                dtype nullFunPtr nullPtr
+
+contextDevices :: Context -> [DeviceID]
+contextDevices context = map DeviceID
+        $ getPureProp (clGetContextInfo context CLContextDevices)
+
