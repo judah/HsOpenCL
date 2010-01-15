@@ -63,8 +63,8 @@ instance Ix i => CopyTo Buffer (IOCArray i) where
 instance Ix i => CopyTo Buffer (CArray i) where
     b =: a = asSlice b =: a
 
-copyToCArray :: forall m i e . (Ix i, Storable e, MonadQueue m)
-                    => (i,i) -> Buffer e -> m (CArray i e)
+copyToCArray :: (Ix i, Storable e, MonadQueue m, CopyTo (IOCArray i) b)
+                    => (i,i) -> b e -> m (CArray i e)
 copyToCArray bounds b = do
     a <- liftIO $ newArray_ bounds
     waitForCommands_ [ a =: b]

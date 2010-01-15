@@ -32,7 +32,8 @@ other-modules:
     System.HsOpenCL.Platform.Foreign
 extensions: ForeignFunctionInterface, DeriveDataTypeable, EmptyDataDecls,
             ScopedTypeVariables, GADTs, MultiParamTypeClasses
-            TypeSynonymInstances, FlexibleInstances, OverlappingInstances
+            TypeSynonymInstances, FlexibleInstances, FlexibleContexts,
+            OverlappingInstances
             Rank2Types, TemplateHaskell
 frameworks: OpenCL
 -- Note: -fvia-C prevents a segfault (ghc trac #3789)
