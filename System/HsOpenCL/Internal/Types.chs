@@ -169,7 +169,7 @@ instance Property Word32 where
 
 instance Property Word64 where
     getProp = storableInfo
-    
+
 instance Enum a => Property (a -> Bool) where
     getProp getInfo = do
         bitmask :: CULLong <- storableInfo getInfo
