@@ -80,7 +80,7 @@ module System.HsOpenCL.Platform(
 #include <OpenCL/OpenCL.h>
 
 import Control.Applicative
-import Data.Bits
+import Control.Exception
 
 import System.HsOpenCL.Internal.C2HS
 import System.HsOpenCL.Error
@@ -112,8 +112,11 @@ instance Show PlatformID where
 
 getDeviceID :: [DeviceType] -> IO DeviceID
 getDeviceID dtype = alloca $ \p -> do
-    clGetDeviceIDs nullPtr dtype 1 p
-    DeviceID <$> peek (castPtr p)
+    r <- clGetDeviceIDs nullPtr dtype 1 p
+    -- Double-check return; in particular, OS X 10.6.2 doesn't give the correct error.
+    if r < 1
+        then throw CLDeviceNotFound
+        else DeviceID <$> peek (castPtr p)
 
 getDeviceIDs :: [DeviceType] -> Maybe PlatformID -> IO [DeviceID]
 getDeviceIDs dtype m_platform= do
