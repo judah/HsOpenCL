@@ -281,11 +281,13 @@ ident = tok $ liftM2 (:) identNonDigit (many identChar)
 typeIdent :: Parser Type
 typeIdent = do
     n <- ident
-    n' <- if n=="unsigned"
-            then ('u':) <$> ident
-            else return n
-    case lookup n' scalarTypes of
-        Nothing -> fail $ "bad type: " ++ show n'
+    case n of
+        "const" -> typeIdent
+        "unsigned" -> do {i <- ident; lookupType ('u':i)}
+        _ -> lookupType n
+  where
+    lookupType n = case lookup n scalarTypes of
+        Nothing -> fail $ "bad type: " ++ show n
         Just t -> return t
     
 
