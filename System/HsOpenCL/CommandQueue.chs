@@ -348,7 +348,7 @@ runQueueForDevice dev f = do
 
 runQueueForType :: MonadIO m => DeviceType -> QueueT m a -> m a
 runQueueForType dtype f = do
-    dev <- liftIO $ getDeviceID dtype
+    dev <- liftIO $ getDeviceID [dtype]
     runQueueForDevice dev f
 
 runQueueForContext :: MonadIO m => DeviceID -> Context -> QueueT m a -> m a

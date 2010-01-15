@@ -9,6 +9,7 @@ module System.HsOpenCL.Platform(
             platformExtensions,
             -- * Devices
             DeviceType(..),
+            deviceTypeAll,
             DeviceID,
             getDeviceID,
             getDeviceIDs,
@@ -109,12 +110,12 @@ instance Show PlatformID where
 
 
 
-getDeviceID :: DeviceType -> IO DeviceID
+getDeviceID :: [DeviceType] -> IO DeviceID
 getDeviceID dtype = alloca $ \p -> do
     clGetDeviceIDs nullPtr dtype 1 p
     DeviceID <$> peek (castPtr p)
 
-getDeviceIDs :: DeviceType -> Maybe PlatformID -> IO [DeviceID]
+getDeviceIDs :: [DeviceType] -> Maybe PlatformID -> IO [DeviceID]
 getDeviceIDs dtype m_platform= do
     let platform = maybe nullPtr platformIDPtr m_platform
     -- First, query for the total number:
@@ -314,7 +315,7 @@ devicePlatform = PlatformID . castPtr . deviceInfo (#const CL_DEVICE_PLATFORM)
 createContext :: [DeviceID] -> IO Context
 createContext devices = clCreateContext nullPtr devices nullFunPtr nullPtr
 
-createContextFromType :: DeviceType -> IO Context
+createContextFromType :: [DeviceType] -> IO Context
 createContextFromType dtype = clCreateContextFromType nullPtr
                                 dtype nullFunPtr nullPtr
 
