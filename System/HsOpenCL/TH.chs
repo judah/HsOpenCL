@@ -94,18 +94,31 @@ declareProgData prog fields = do
         t <- kerFuncType argTypes
         return (mkName name,NotStrict,t)
 
-
+-- Type-splices aren't fully supported in ghc-6.10
 kerFuncType :: [Type] -> TypeQ
 kerFuncType types = do
-    let funcTy = loop types 
-    [t|NDRange d => d -> Maybe d -> $(return funcTy)|]
-  where
-    loop [] = ConT ''Command
-    loop (t:ts) = AppT (AppT ArrowT t) $ loop ts
+    d <- newName "d"
+    return $ cxtd ''NDRange d $ arrows $
+                    [VarT d, ConT ''Maybe `AppT` VarT d]
+                        ++ types
+                        ++ [ConT ''Command]
 
 declareBuildSig :: Name -> Name -> Q Dec
-declareBuildSig buildName progName = sigD buildName
-            [t|MonadQueue m => String -> m $(conT progName)|]
+declareBuildSig buildName progName = sigD buildName $ do
+    m <- newName "m"
+    return $ cxtd ''MonadQueue m $ arrows
+            [ConT ''String, VarT m `AppT` ConT progName]
+
+arrows :: [Type] -> Type
+arrows [t] = t
+arrows (t:ts) = AppT (AppT ArrowT t) $ arrows ts
+
+cxtd :: Name -> Name -> Type -> Type
+#if __GLASGOW_HASKELL__ >= 611
+cxtd cls v t = ForallT [PlainTV v] [ClassP cls [VarT v]] t
+#else
+cxtd cls v t = ForallT [v] [AppT (ConT cls) (VarT v)] t
+#endif
 
 -- OK, now the build def:
 -- buildProg options = do
