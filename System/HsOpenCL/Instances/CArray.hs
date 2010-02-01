@@ -9,7 +9,6 @@ module System.HsOpenCL.Instances.CArray(
 import System.HsOpenCL.Kernel
 import System.HsOpenCL.Memory
 import System.HsOpenCL.CommandQueue
-import System.HsOpenCL.MonadQueue
 
 import Control.Monad.Trans
 import Data.Array.CArray

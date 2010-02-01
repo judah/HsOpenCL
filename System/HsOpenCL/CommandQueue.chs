@@ -1,25 +1,33 @@
 module System.HsOpenCL.CommandQueue(
-                -- * Command queues
-                CommandQueue,
-                CommandQueueProperty(..),
-                createCommandQueue,
-                -- * The Queue monad
+                -- * Mid-level monadic interface
+                QueueT(..),
+                QueueIO,
+                -- ** Running QueueT actions
                 runQueueForType,
                 runQueueForDevice,
                 runQueueForContext,
+                -- ** Monadic convenience classes
+                MonadBracket(..),
+                MonadQueue(..),
+                module Control.Monad.Trans,
+                -- ** Basic queue operations
                 getContext,
                 getDevice,
                 setProperties,
-                -- flush,
-                -- finish,
-                -- ** Commands
+                -- * Commands
                 Command(..),
                 -- waitingFor,
                 waitForCommand,
                 waitForCommands,
                 waitForCommands_,
                 mkCommand,
-                -- * Querying info and properties
+                -- flush,
+                -- finish,
+                -- * Command queues
+                CommandQueue,
+                CommandQueueProperty(..),
+                createCommandQueue,
+                -- * Querying properties
                 queueDevice,
                 queueContext,
                 getQueueProperties,
@@ -28,7 +36,6 @@ module System.HsOpenCL.CommandQueue(
                 Event,
                 -- waitForEvents,
                 -- waitForEvent,
-                -- ** Lower-level
                 eventCommandQueue,
                 CommandType(..),
                 eventCommandType,
@@ -38,6 +45,9 @@ module System.HsOpenCL.CommandQueue(
                 -- enqueueWaitForEvents,
                 -- enqueueBarrier,
                 -- ** Profiling
+                -- | When 'QueueProfilingEnable' has been set for a queue,
+                -- each 'Event' contains timing information for the corresponding
+                -- 'Command'.
                 getCommandQueued,
                 getCommandSubmit,
                 getCommandStart,
@@ -48,14 +58,69 @@ module System.HsOpenCL.CommandQueue(
 import System.HsOpenCL.Internal.Types
 import System.HsOpenCL.Internal.C2HS
 import System.HsOpenCL.Error
-import System.HsOpenCL.MonadQueue
 import System.HsOpenCL.Platform
 import System.HsOpenCL.Platform.Foreign(CommandQueueProperty(..))
 
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
+import Data.Ix
+import Data.Array.Base as Array
 
+
+--------------------------------------------
+-- Monadic interface
+newtype QueueT m a = QueueT {runQueueT :: CommandQueue -> m a}
+
+type QueueIO = QueueT IO
+
+instance Functor m => Functor (QueueT m) where
+    fmap f g = QueueT $ fmap f . runQueueT g
+
+-- TODO: Applicative definition
+
+instance Monad m => Monad (QueueT m) where
+    return x = QueueT $ const $ return x
+    f >>= g = QueueT $ \q -> runQueueT f q >>= flip runQueueT q . g
+
+instance MonadTrans QueueT where
+    lift = QueueT . const
+
+instance MonadIO m => MonadIO (QueueT m) where
+    liftIO = lift . liftIO
+
+class MonadIO m => MonadBracket m where
+    liftIOBracket :: (forall b . (a -> IO b) -> IO b)
+                            -> (a -> m b) -> m b
+
+instance MonadBracket IO where
+    liftIOBracket = id
+
+instance MonadBracket m => MonadBracket (QueueT m) where
+    liftIOBracket wrap f = QueueT $ \queue ->
+           liftIOBracket wrap $ \x -> runQueueT (f x) queue
+
+class MonadBracket m => MonadQueue m where
+    getQueue :: m CommandQueue
+
+instance MonadBracket m => MonadQueue (QueueT m) where
+    getQueue = QueueT return
+
+-- TODO: see if INLINEs are necessary
+instance MArray a e m => MArray a e (QueueT m) where
+    getBounds = lift . getBounds
+    getNumElements = lift . getNumElements
+    newArray bounds e = lift $ Array.newArray bounds e
+    newArray_ = lift . newArray_
+    unsafeNewArray_ = lift . unsafeNewArray_
+    unsafeRead a i = lift $ unsafeRead a i
+    unsafeWrite a i x = lift $ unsafeWrite a i x
+
+
+
+
+
+--------------------------------------------
 
 {#fun clCreateCommandQueue as createCommandQueue
   { withContext* `Context'
@@ -233,12 +298,14 @@ waitingFor es (Command f) = Command $ \q es' e -> f q (es++es') e
 
 -- TODO: What happens if we use waitForEvents instead of finish?
 
--- | Enqueue and run the given 'Command's.  If 'QueueOutOfOrderExecModeEnable' has been
--- set, the 'Command's may not be run in order on the device; and one may start before
--- previous has finished.  However, in either case 'waitForCommands' will not return
--- until all of the given 'Command's have completed.
--- 
+-- | Enqueue and run the given 'Command's.  Blocks until all of the given
+-- 'Command's have completed.
 -- Returns a list of 'Event's describing the input 'Command's.
+-- 
+-- If 'QueueOutOfOrderExecModeEnable' has been
+-- set, then the 'Command's are not guaranteed to run in the order of the list,
+-- and a 'Command' may start before the previous one has finished.
+-- 
 waitForCommands :: MonadQueue m => [Command] -> m [Event]
 waitForCommands cs = do
     q <- getQueue
@@ -267,7 +334,7 @@ newEvent = newData Event clReleaseEvent
 foreign import ccall "&" clReleaseEvent :: Releaser Event_
 
 -- | Behaves the same as 'waitForCommands', but does not create or return 'Event's
--- for them.
+-- for the given 'Command's.
 waitForCommands_ :: MonadQueue m => [Command] -> m ()
 waitForCommands_ cs = do
     q <- getQueue
@@ -279,7 +346,7 @@ waitForCommands_ cs = do
     -- TODO: time with both f>>fs and f:fs, and see which is fastest.
     loop q fs (c:cs) = runCommand c q [] nullPtr >>= \f -> loop q (f>>fs) cs
 
--- | Enqueue and run one 'Command'.  Once that 'Command' has completed, it returns
+-- | Enqueue and run one 'Command'.  Once that 'Command' has completed, returns
 -- an 'Event' describing the input 'Command'.
 waitForCommand :: MonadQueue m => Command -> m Event
 waitForCommand c = do

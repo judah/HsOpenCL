@@ -27,7 +27,6 @@ import System.HsOpenCL.Internal.Types
 import System.HsOpenCL.Internal.C2HS
 import System.HsOpenCL.Error
 import System.HsOpenCL.Platform(Size,ULong)
-import System.HsOpenCL.MonadQueue
 import System.HsOpenCL.CommandQueue
 import Control.Monad
 

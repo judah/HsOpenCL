@@ -17,7 +17,6 @@ import Data.Word
 
 import System.HsOpenCL.Program
 import System.HsOpenCL.Kernel
-import System.HsOpenCL.MonadQueue
 import System.HsOpenCL.CommandQueue
 import System.HsOpenCL.Memory
 

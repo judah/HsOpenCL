@@ -23,7 +23,6 @@ import System.HsOpenCL.Internal.Types
 import System.HsOpenCL.Internal.C2HS
 import System.HsOpenCL.Error
 import System.HsOpenCL.Platform() -- for Show instance of DeviceID
-import System.HsOpenCL.MonadQueue
 import System.HsOpenCL.CommandQueue
 
 import Control.Exception

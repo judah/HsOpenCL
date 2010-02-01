@@ -34,7 +34,6 @@ import System.HsOpenCL.Internal.Types
 import System.HsOpenCL.Internal.C2HS
 import System.HsOpenCL.CommandQueue(Command(..))
 import System.HsOpenCL.Error
-import System.HsOpenCL.MonadQueue
 import System.HsOpenCL.CommandQueue
 import Data.Maybe
 import Control.Applicative

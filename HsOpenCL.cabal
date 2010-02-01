@@ -19,7 +19,6 @@ exposed-modules:
     System.HsOpenCL.Error
     System.HsOpenCL.Platform
     System.HsOpenCL.Program
-    System.HsOpenCL.MonadQueue
     System.HsOpenCL.CommandQueue
     System.HsOpenCL.Kernel
     System.HsOpenCL.Memory
