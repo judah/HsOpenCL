@@ -12,13 +12,13 @@ import Data.Array.IOCArray (newListArray)
 import System.IO
 import Data.List (findIndices)
 
--- declareKernelsFromFile "Adder" "test_prog.cl"
-declareKernels "Adder" [$clProg| __kernel void
+-- $(declareKernelsFromFile "Adder" "test_prog.cl")
+$(declareKernels "Adder" [$clProg| __kernel void
             add(__global float *a,__global float *b, __global float *answer)
             {
 	        int gid = get_global_id(0);
 	        answer[gid] = a[gid] + b[gid];
-            }|]
+            }|])
 
 
 main = do
