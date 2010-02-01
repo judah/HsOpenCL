@@ -1,3 +1,7 @@
+-- | This module exports instances of 'CopyTo' for copying from (immutable) 'CArray's to 'Buffer's,
+-- and between 'Buffer's and (mutable) 'IOCArray's.
+--
+-- It also contains a few helper functions for integrating 'CArray's with OpenCL.
 module System.HsOpenCL.Instances.CArray(
         asCArray,
         asIOCArray,
@@ -21,9 +25,12 @@ import Control.Applicative
 -- Give the type-checker some hints, since functions like newArray
 -- are polymorphic.  This seems less messy than a bunch of ScopedTypeVariable
 -- bindings.
+
+-- | Forces the type of an 'Array' instance to be 'CArray'.
 asCArray :: CArray i a -> CArray i a
 asCArray = id
 
+-- | Forces the type of an 'MArray' instance to be 'IOCArray'.
 asIOCArray :: m (IOCArray i a) -> m (IOCArray i a)
 asIOCArray = id
 
@@ -61,6 +68,7 @@ instance Ix i => CopyTo Buffer (IOCArray i) where
 instance Ix i => CopyTo Buffer (CArray i) where
     b =: a = asSlice b =: a
 
+-- | Create a new (immutable) 'CArray' from the contents of a 'Buffer' or 'Slice'.
 copyToCArray :: (Ix i, Storable e, MonadQueue m, CopyTo (IOCArray i) b)
                     => (i,i) -> b e -> m (CArray i e)
 copyToCArray bounds b = do
