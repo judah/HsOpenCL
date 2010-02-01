@@ -1,7 +1,69 @@
-module System.HsOpenCL.TH(declareKernelsFromFile
+{- |
+This module contains Template Haskell commands which eliminate much
+of the boilerplate of using an OpenCL source file while providing
+an additional layer of type safety.
+
+For example, suppose that @file.cl@ contained two kernels:
+
+> __kernel void add(__global float *a, __global int* b, __global float* c)
+> __kernel void scale(float x, __global float *y, __local float *z)
+
+Then the splice @$(declareKernelsFromFile \"ProgAdd\" \"path\/to\/file.cl\")@
+would generate the following declarations:
+
+
+> data ProgAdd = ProgAdd {
+>           add :: forall d . NDRange d =>
+>                       Buffer Float -> Buffer Int32 -> Bufer Float -> Command
+>           , scale :: forall d . NDRange d =>
+>                       Float -> Buffer Float -> Local Float -> Command
+>                        }
+>
+> buildProgAdd :: MonadQueue m => String -> m ProgAdd
+> buildProgAdd options = ...
+
+
+Note that the generated code requires the @Rank2Types@ extension.
+
+Quasiquoting can also be used to integrate OpenCL code in a Haskell module.
+For example:
+
+> $(declareKernels "Reverse" [$clProg| __kernel void reverse(__global float *a) {
+>                   ...
+>                   } |] )
+-}
+
+module System.HsOpenCL.TH(
+            declareKernelsFromFile
             , declareKernels
             , clProg
             ) where
+{-
+This module declares Template Haskell commands wich can automatically
+importing an OpenCL file into source code, while preserving type-safety.
+
+For example, say file.cl contains two kernels:
+
+> __kernel void add(__global float *a, __global int* b, __global float* c)
+> __kernel void scale(float x, __global float *y)
+
+Then calling $(declareKernelsFromFile "ProgAdd" "path/to/file.cl") outputs
+two declarations:
+
+@
+ data ProgAdd = ProgAdd {add :: Buffer Float -> Buffer Int32
+                                -> Bufer Float -> Command
+                        , scale :: Float -> Buffer Float -> Command
+                        }
+
+buildProgAdd :: MonadQueue m => String -> m ProgAdd
+buildProgAdd options = ...
+
+@
+
+ALSO quasiquoting
+
+-}
 
 import Text.Parsec
 import Text.Parsec.ByteString
@@ -19,27 +81,6 @@ import System.HsOpenCL.Program
 import System.HsOpenCL.Kernel
 import System.HsOpenCL.CommandQueue
 import System.HsOpenCL.Memory
-
-{-
-This module declares Template Haskell commands for automatically
-importing an OpenCL file into source code, with type-safety.
-
-For example, say file.cl contains two kernels:
-
-__kernel void add(__global float *a, __global float* b, __global float* c)
-__kernel void scale(float x, __global float *y)
-
-Then calling $(declareKernelsFromFile "ProgAdd" "path/to/file.cl") outputs
-two declarations:
-
- data ProgAdd = ProgAdd {add :: Buffer Float -> Buffer Float
-                                -> Bufer Float -> Command
-                        , scale :: Float -> Buffer Float -> Command
-                        }
-
-buildProgAdd :: MonadQueue m => String -> m ProgAdd
-buildProgAdd options = ...
--}
 
 linePragma :: Int -> FilePath -> String
 linePragma n f = "#line " ++ show n ++ " " ++ show f ++ "\n"
