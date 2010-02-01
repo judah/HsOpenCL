@@ -83,7 +83,7 @@ createProgramWithBinary cxt devBinaries = do
     clCreateProgramWithBinary cxt devs lengthsP
                     binariesP statuses
 
--- | Convenience function; prints an error message when fails.
+-- | A convenience function which prints an error message if the build fails.
 buildProgramFromSource :: MonadQueue m => String -> [ByteString] -> m Program
 buildProgramFromSource options sources = getContext >>= \cxt -> liftIO $ do
     prog <- createProgramWithSource cxt sources
