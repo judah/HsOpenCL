@@ -27,7 +27,6 @@ asCArray = id
 asIOCArray :: m (IOCArray i a) -> m (IOCArray i a)
 asIOCArray = id
 
-time = 10000
 iocarraySize (IOCArray _ _ n _) = n
 
 instance (Ix i) => CopyTo (IOCArray i) Slice where
