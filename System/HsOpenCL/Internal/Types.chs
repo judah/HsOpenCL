@@ -32,6 +32,7 @@ newData construct release p = construct <$> newForeignPtr release (castPtr p)
 -- Note that unlike the others, DeviceID and PlatformID have no way to be
 -- released, so it's just a pointer.
 data DeviceID_
+-- | An OpenCL device, such as a GPU or CPU.
 newtype DeviceID = DeviceID {_deviceIDPtr :: Ptr DeviceID_}
 deviceIDPtr :: DeviceID -> Ptr ()
 deviceIDPtr (DeviceID p) = castPtr p
@@ -106,6 +107,8 @@ newProgram = newData Program clReleaseProgram
 -- However, in OpenCL.Kernel the argument is set and run all within the same
 -- call to withBufferPtr, so this should actually be OK.
 data Buffer_
+
+-- | A region of memory on an OpenCL device.
 newtype Buffer a = Buffer (ForeignPtr Buffer_)
 withBuffer :: Buffer a -> (Ptr () -> IO b) -> IO b
 withBuffer (Buffer p) f = withForeignPtr p $ f . castPtr

@@ -1,31 +1,32 @@
 module System.HsOpenCL.Memory(
-                -- * Memory objects
-                MemObject(),
-                MemAccessFlag(..),
-                MemInitFlag(..),
                 -- * Buffers
                 Buffer,
                 castBuffer,
+                bufferSize,
                 newBuffer,
-                allocaBuffer,
                 touchBuffer,
-                -- * Reading, writing and copying buffers
-                IsBlocking(..),
-                readBuffer,
-                writeBuffer,
-                copyBuffer,
-                -- ** Convenience class
+                allocaBuffer,
+                -- * Reading, writing and copying
                 CopyTo(..),
                 BufferLike(..),
                 Slice(),
                 slice,
                 sizeS,
+                -- ** Buffer operations
+                -- | This section provides an API for buffer operations which is closer
+                -- to the actual OpenCL API.
+                IsBlocking(..),
+                readBuffer,
+                writeBuffer,
+                copyBuffer,
                 -- * Properties
+                MemObject(),
+                MemAccessFlag(..),
+                MemInitFlag(..),
                 memFlags,
                 memSize,
-                bufferSize,
                 memContext,
-                getMemReferenceCount,
+                -- getMemReferenceCount,
                 ) where
 
 #include <OpenCL/OpenCL.h>
@@ -77,6 +78,9 @@ data MemInitFlag a = NoHostPtr | UseHostPtr (Ptr a)
                         | CopyAllocHostPtr (Ptr a)
                     deriving (Show,Eq)
 
+-- | Allocate memory on the device associated with this queue.  
+-- The memory will be retained at least until the 'Buffer' goes out of scope and all
+-- 'Command's using the 'Buffer' have completed.  
 newBuffer :: forall a m . (Storable a, MonadQueue m)
         => MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
@@ -107,11 +111,14 @@ newBuffer' context memAccess hostPtr size
             MemWriteOnly -> CLMemWriteOnly_
             MemReadOnly -> CLMemReadOnly_
 
+-- | Like 'touchForeignPtr', this ensures that a 'Buffer' allocatd by 'newBuffer' will be
+-- in scope at the given place in the program.
 touchBuffer :: MonadIO m => Buffer a -> m ()
 touchBuffer (Buffer f) = liftIO $ touchForeignPtr f
 
--- | Note the buffer is freed at the end of this block, so it is unsafe to use it
--- outside of the block.  (Unless you use 'touchMemObject'.)
+-- | Allocate memory on the device associated with this queue, and execute the given
+-- action.  The 'Buffer' is released once the action has completed and all 'Command's
+-- associated with it have finished.
 allocaBuffer :: (Storable a, MonadQueue m) => MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
             -> (Buffer a -> m b) -> m b
@@ -202,17 +209,39 @@ copyBuffer source dest srcOff destOff size
 
 ---------
 -- TODO: make all this take Integral or CSize parameters.
+
+{- | 
+ Reads, writes and copies between device and host memory can all be performed using
+the 'CopyTo' class.
+
+For example, if @a :: Buffer Float@ and @c :: Ptr Float@, then @waitForCommand (a := c)@
+copies @bufferSize a@ elements (i.e., @Float@s) from @c@ to @a@.
+
+This class can also be used to copy to/from subregions of device memory.  For example,
+@waitForCommand (slice 2 10 a =: slice 0 10 b)@ copies the first 10 elements of @b@ into
+indices @[2..11]@ of @a@.
+
+All 'CopyTo' operations are unblocking.  As a result, when 'QueueOutOfOrderExecModeEnable'
+has been set, the runtime may copy data simultaneously or out of order from other
+'Command's.  
+order.  
+
+The module "System.HsOpenCL.Instances.CArray" exports instances for copying to and from
+'CArray's, which may be more convenient to use than pointers.
+-}
 class CopyTo a b where
+    -- | A copy between host and device memory, or between two device memory objects.
     (=:) :: Storable e => a e -> b e -> Command
 
+-- | This class represents objects of which we can select a subregion; namely, 'Buffer'
+-- and 'Slice'.
 class BufferLike b where
     asSlice :: Storable e => b e -> Slice e
 
 instance BufferLike Buffer where
     asSlice b = Slice 0 (bufferSize b) b
 
--- indexes are as elements.
--- there's some unnecessary operations, but whatever.
+-- | A subregion of a 'Buffer'.
 data Slice e = Slice {offsetS :: !Int,
                         sizeS :: !Int,
                         bufferS :: !(Buffer e)
@@ -224,6 +253,7 @@ instance Show (Slice e) where
 instance BufferLike Slice where
     asSlice = id
 
+-- | Select a subregion of the given 'Buffer' or 'Slice'.
 slice :: Storable e => BufferLike b => Int -> Int -> b e -> Slice e
 slice o s b = let
                 b' = asSlice b
@@ -331,6 +361,7 @@ getMemReferenceCount m
 -- There's a lot of ways we could go with the mem objects;
 -- but this API shouldn't add too much to what's already in OpenCL.
 
+-- | A memory region on the device.  
 class MemObject m where
     withMemObject :: m -> (Ptr () -> IO a) -> IO a
 

@@ -214,19 +214,31 @@ getEventCommandExecutionStatus e = toEnum <$>
 
 -------
 -- TODO: just Command {finalize :: IO, runCommand :: ...->IO Event}???
+
+-- | An action which can be enqueued and run on an OpenCL device;
+-- for example, reading/writing memory or running a program kernel.
 newtype Command = Command {runCommand :: CommandQueue ->
                             [Event] -> Ptr (Ptr ()) -> IO (IO ())}
 
 -- TODO: data EventPtr to wrap the Ptr (Ptr ())?
 
+-- | Low-level function to help create 'Command's.
 mkCommand :: (CommandQueue -> [Event] -> Ptr (Ptr ()) -> IO ())
                     -> Command
 mkCommand f = Command $ \q es e -> f q es e >> return (return ())
 
+-- TODO: not useful yet...
 waitingFor :: [Event] -> Command -> Command
 waitingFor es (Command f) = Command $ \q es' e -> f q (es++es') e
 
 -- TODO: What happens if we use waitForEvents instead of finish?
+
+-- | Enqueue and run the given 'Command's.  If 'QueueOutOfOrderExecModeEnable' has been
+-- set, the 'Command's may not be run in order on the device; and one may start before
+-- previous has finished.  However, in either case 'waitForCommands' will not return
+-- until all of the given 'Command's have completed.
+-- 
+-- Returns a list of 'Event's describing the input 'Command's.
 waitForCommands :: MonadQueue m => [Command] -> m [Event]
 waitForCommands cs = do
     q <- getQueue
@@ -254,7 +266,8 @@ newEvent = newData Event clReleaseEvent
 
 foreign import ccall "&" clReleaseEvent :: Releaser Event_
 
-
+-- | Behaves the same as 'waitForCommands', but does not create or return 'Event's
+-- for them.
 waitForCommands_ :: MonadQueue m => [Command] -> m ()
 waitForCommands_ cs = do
     q <- getQueue
@@ -266,7 +279,8 @@ waitForCommands_ cs = do
     -- TODO: time with both f>>fs and f:fs, and see which is fastest.
     loop q fs (c:cs) = runCommand c q [] nullPtr >>= \f -> loop q (f>>fs) cs
 
-
+-- | Enqueue and run one 'Command'.  Once that 'Command' has completed, it returns
+-- an 'Event' describing the input 'Command'.
 waitForCommand :: MonadQueue m => Command -> m Event
 waitForCommand c = do
     [e] <- waitForCommands [c]
