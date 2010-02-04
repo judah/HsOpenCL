@@ -25,7 +25,7 @@ would generate the following declarations:
 
 Note that the generated code requires the @Rank2Types@ extension.
 
-Quasiquoting can also be used to integrate OpenCL code in a Haskell module.
+Quasiquoting can also be used to integrate OpenCL code into a Haskell module.
 For example:
 
 > $(declareKernels "Reverse" [$clProg| __kernel void reverse(__global float *a) {

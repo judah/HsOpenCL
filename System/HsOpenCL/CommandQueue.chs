@@ -46,8 +46,8 @@ module System.HsOpenCL.CommandQueue(
                 -- enqueueBarrier,
                 -- ** Profiling
                 -- | When 'QueueProfilingEnable' has been set for a queue,
-                -- each 'Event' contains timing information for the corresponding
-                -- 'Command'.
+                -- it is possible to get timing information from an 'Event' using
+                -- the following functions.
                 getCommandQueued,
                 getCommandSubmit,
                 getCommandStart,
@@ -281,7 +281,7 @@ getEventCommandExecutionStatus e = toEnum <$>
 -- TODO: just Command {finalize :: IO, runCommand :: ...->IO Event}???
 
 -- | An action which can be enqueued and run on an OpenCL device;
--- for example, reading/writing memory or running a program kernel.
+-- for example, reading/writing host memory or running a program kernel.
 newtype Command = Command {runCommand :: CommandQueue ->
                             [Event] -> EventPtr -> IO (IO ())}
 
