@@ -143,7 +143,7 @@ blockingFlag NonBlocking = 0
   , `Int'
   , castPtr `Ptr a'
   , withEvents* `[Event]'&
-  , id `Ptr (Ptr ())'
+  , eventPtr `EventPtr'
   } -> `Int' checkSuccess*-
 #}
 
@@ -165,7 +165,7 @@ readBuffer mem block offset size p
   , `Int'
   , castPtr `Ptr a'
   , withEvents* `[Event]'&
-  , id `Ptr (Ptr ())'
+  , eventPtr `EventPtr'
   } -> `Int' checkSuccess*-
 #}
 
@@ -186,7 +186,7 @@ writeBuffer mem blocking offset size p
   , `Int'
   , `Int'
   , withEvents* `[Event]'&
-  , id `Ptr (Ptr ())'
+  , eventPtr `EventPtr'
   } -> `Int' checkSuccess*-
 #}
 

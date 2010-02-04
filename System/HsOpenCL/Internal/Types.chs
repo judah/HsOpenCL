@@ -216,3 +216,5 @@ getObjArray getInfo = do
     allocaArray n $ \ps -> do
         n' <- getInfo n (castPtr ps)
         peekArray n' ps
+
+newtype EventPtr = EventPtr {eventPtr :: Ptr (Ptr ())}

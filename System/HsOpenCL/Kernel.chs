@@ -142,7 +142,7 @@ x &: xs = SomeArg x : xs
   , id `Ptr CULong' -- global work size
   , id `Ptr CULong' -- local work size
   , withEvents* `[Event]'&
-  , id `Ptr (Ptr ())'
+  , eventPtr `EventPtr'
   } -> `Int' checkSuccess*-
 #}
 
@@ -161,7 +161,7 @@ runKernelWithArgs k global local as = mkCommand $ \q es ep -> let
             in loop 0 as
 
 runKernel' :: NDRange d => Kernel -> d -> Maybe d
-            -> CommandQueue -> [Event] -> Ptr (Ptr ()) -> IO ()
+            -> CommandQueue -> [Event] -> EventPtr -> IO ()
 runKernel' kernel globalWorkSize localWorkSize queue es ep
        = withArrayLen gsizes $ \dim globalSizes ->
           withLocalSizeArray dim $ \localSizes ->
@@ -205,7 +205,7 @@ instance Integral a => NDRange (a,a,a) where
  { withCommandQueue* `CommandQueue'
  , withKernel* `Kernel'
   , withEvents* `[Event]'&
-  , id `Ptr (Ptr ())'
+  , eventPtr `EventPtr'
  } -> `Int' checkSuccess*-
 #}
 

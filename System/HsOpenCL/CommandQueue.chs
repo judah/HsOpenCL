@@ -283,12 +283,12 @@ getEventCommandExecutionStatus e = toEnum <$>
 -- | An action which can be enqueued and run on an OpenCL device;
 -- for example, reading/writing memory or running a program kernel.
 newtype Command = Command {runCommand :: CommandQueue ->
-                            [Event] -> Ptr (Ptr ()) -> IO (IO ())}
+                            [Event] -> EventPtr -> IO (IO ())}
 
 -- TODO: data EventPtr to wrap the Ptr (Ptr ())?
 
 -- | Low-level function to help create 'Command's.
-mkCommand :: (CommandQueue -> [Event] -> Ptr (Ptr ()) -> IO ())
+mkCommand :: (CommandQueue -> [Event] -> EventPtr -> IO ())
                     -> Command
 mkCommand f = Command $ \q es e -> f q es e >> return (return ())
 
@@ -313,7 +313,7 @@ waitForCommands cs = do
     -- (es,fs) <- liftM unzip $ liftIO $ loop q [] cs
     (es,fs) <- liftM unzip $ liftIO $ forM cs $ \c -> do
                         alloca $ \p -> do
-                                f <- runCommand c q [] p
+                                f <- runCommand c q [] (EventPtr p)
                                 e <- peek p >>= newEvent
                                 return (e,f)
     finish
@@ -323,7 +323,7 @@ waitForCommands cs = do
     loop q es [] = return es
     loop q es (c:cs) = do
         ef <- alloca $ \p -> do
-                f <- runCommand c q [] p
+                f <- runCommand c q [] (EventPtr p)
                 e <- peek p >>= newEvent
                 return (e,f)
         loop q (ef:es) cs
@@ -344,7 +344,7 @@ waitForCommands_ cs = do
   where
     loop q fs [] = return fs
     -- TODO: time with both f>>fs and f:fs, and see which is fastest.
-    loop q fs (c:cs) = runCommand c q [] nullPtr >>= \f -> loop q (f>>fs) cs
+    loop q fs (c:cs) = runCommand c q [] (EventPtr nullPtr) >>= \f -> loop q (f>>fs) cs
 
 -- | Enqueue and run one 'Command'.  Once that 'Command' has completed, returns
 -- an 'Event' describing the input 'Command'.
