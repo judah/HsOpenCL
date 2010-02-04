@@ -40,7 +40,7 @@ module System.HsOpenCL.Internal.C2HS (
   module Foreign,
 
   -- * Re-export the C language component of the FFI
-  module CForeign,
+  module Foreign.C,
 
   -- * Composite marshalling functions
   -- withCStringLenIntConv, peekCStringLenIntConv, withIntConv, withFloatConv,
@@ -62,9 +62,9 @@ import Foreign
        hiding       (Word)
 		    -- Should also hide the Foreign.Marshal.Pool exports in
 		    -- compilers that export them
-import CForeign
+import Foreign.C
 
-import Monad        (liftM)
+import Control.Monad        (liftM)
 
 
 -- Composite marshalling functions
