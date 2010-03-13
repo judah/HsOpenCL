@@ -36,37 +36,26 @@ asIOCArray = id
 
 iocarraySize (IOCArray _ _ n _) = n
 
-instance (Ix i) => CopyTo (IOCArray i) Slice where
+instance (BufferLike b, Ix i) => CopyTo (IOCArray i) b where
     a =: b
-        | iocarraySize a < sizeS b = error "Copying too big!"
+        | iocarraySize a < sizeS b' = error "Copying too big!"
         | otherwise = Command $ \q es ep -> withIOCArray a $ \p ->
                 (>>touchIOCArray a) <$> 
-                        runCommand (p =: b) q es ep
+                        runCommand (p =: b') q es ep
+      where b' = asSlice b
 
-instance (Ix i) => CopyTo Slice (IOCArray i) where
+instance (BufferLike b, Ix i) => CopyTo b (IOCArray i) where
     b =: a
-        | iocarraySize a > sizeS b = error "Copying too big!"
+        | iocarraySize a > sizeS b' = error "Copying too big!"
         | otherwise = Command $ \q es ep -> withIOCArray a $ \p -> do
                 (>>touchIOCArray a) <$> 
-                    runCommand (b =: p) q es ep
+                    runCommand (b' =: p) q es ep
+      where b' = asSlice b
 
 -- TODO: is this actually safe w/ the touching?
-instance (Ix i) => CopyTo Slice (CArray i) where
-    b =: a = case toForeignPtr a of
-            (n,fp)
-                | n > sizeS b -> error "Copying too big!"
-                | otherwise -> Command $ \q es ep -> withForeignPtr fp $ \p -> do
-                    (>>touchForeignPtr fp)
-                        <$> runCommand (b =: p) q es ep
-
-instance Ix i => CopyTo (IOCArray i) Buffer where
-    a =: b = a =: asSlice b
-
-instance Ix i => CopyTo Buffer (IOCArray i) where
-    b =: a = asSlice b =: a
-
-instance Ix i => CopyTo Buffer (CArray i) where
-    b =: a = asSlice b =: a
+instance (BufferLike b, Ix i) => CopyTo b (CArray i) where
+    -- Use asSlice here to prevent overlapping instances.
+    b =: CArray i j n fp = asSlice b =: IOCArray i j n fp
 
 -- | Create a new (immutable) 'CArray' from the contents of a 'Buffer' or 'Slice'.
 copyToCArray :: (Ix i, Storable e, MonadQueue m, CopyTo (IOCArray i) b)
