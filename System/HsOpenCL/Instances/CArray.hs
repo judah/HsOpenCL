@@ -37,24 +37,14 @@ asIOCArray = id
 iocarraySize (IOCArray _ _ n _) = n
 
 instance (BufferLike b, Ix i) => CopyTo (IOCArray i) b where
-    a =: b
-        | iocarraySize a < sizeS b' = error "Copying too big!"
-        | otherwise = Command $ \q es ep -> withIOCArray a $ \p ->
-                (>>touchIOCArray a) <$> 
-                        runCommand (p =: b') q es ep
-      where b' = asSlice b
+    IOCArray _ _ n fp =: b
+        = SlicedPtr {ptrFPtr=fp, ptrOffset=0, ptrLength=n} =: asSlice b
 
 instance (BufferLike b, Ix i) => CopyTo b (IOCArray i) where
-    b =: a
-        | iocarraySize a > sizeS b' = error "Copying too big!"
-        | otherwise = Command $ \q es ep -> withIOCArray a $ \p -> do
-                (>>touchIOCArray a) <$> 
-                    runCommand (b' =: p) q es ep
-      where b' = asSlice b
+    b =: IOCArray _ _ n fp
+        = asSlice b =: SlicedPtr {ptrFPtr=fp, ptrOffset=0, ptrLength=n}
 
--- TODO: is this actually safe w/ the touching?
 instance (BufferLike b, Ix i) => CopyTo b (CArray i) where
-    -- Use asSlice here to prevent overlapping instances.
     b =: CArray i j n fp = asSlice b =: IOCArray i j n fp
 
 -- | Create a new (immutable) 'CArray' from the contents of a 'Buffer' or 'Slice'.

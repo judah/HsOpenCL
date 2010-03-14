@@ -12,6 +12,7 @@ module System.HsOpenCL.Memory(
                 Slice(),
                 slice,
                 sizeS,
+                SlicedPtr(..),
                 -- ** Buffer operations
                 -- | This section provides an API for buffer operations which is closer
                 -- to the actual OpenCL API.
@@ -282,13 +283,34 @@ instance (BufferLike b1, BufferLike b2) => CopyTo b1 b2 where
             else copyBuffer (bufferS s2) (bufferS s1)
                     (offsetS s2) (offsetS s1) (sizeS s1)
 
+-- | A slice of the data contained in a ForeignPtr.  The 'CopyTo' instance for this type
+-- ensures that the 'ForeignPtr' will be retained until the copy has completed.
+-- 
+-- An error will be thrown when copying between a SlicedPtr and a Buffer of unequal sizes.
+data SlicedPtr a = SlicedPtr {ptrFPtr :: ForeignPtr a, ptrOffset :: Int, ptrLength :: Int}
 
-foreign import ccall "&" clReleaseMemObject :: Releaser m
+withSlicedPtr :: Storable a => SlicedPtr a -> (Ptr a -> IO b) -> IO b
+withSlicedPtr sp f = withForeignPtr (ptrFPtr sp) $ \p -> f $ advancePtr p (ptrOffset sp)
 
-{#fun clReleaseMemObject as releaseMemObject
-  { id `Ptr ()'
-  } -> `Int' checkSuccess*-
-#}
+touchSlicedPtr :: SlicedPtr a -> IO ()
+touchSlicedPtr = touchForeignPtr . ptrFPtr
+
+-- Note we use asSlice in these instances to prevent overlapping/incoherent instances.
+instance BufferLike b => CopyTo b SlicedPtr where
+    b =: sp
+        | ptrLength sp /= sizeS b' = error "Mismatched sizes in host-to-device copy!"
+        | otherwise = Command $ \q es ep -> withSlicedPtr sp $ \p ->
+                        (>> touchSlicedPtr sp) <$>
+                            runCommand (b' =: p) q es ep
+      where b' = asSlice b
+
+instance BufferLike b => CopyTo SlicedPtr b where
+    sp =: b
+        | ptrLength sp /= sizeS b' = error "Mismatched sizes in device-to-host copy!"
+        | otherwise = Command $ \q es ep -> withSlicedPtr sp $ \p ->
+                        (>> touchSlicedPtr sp) <$>
+                            runCommand (p =: b') q es ep
+      where b' = asSlice b
 
 
 {#fun clGetMemObjectInfo as getMemInfo
