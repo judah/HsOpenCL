@@ -6,6 +6,7 @@ import Foreign
 import Foreign.C
 import Control.Applicative
 import Control.Monad
+import Control.Exception
 
 import System.HsOpenCL.Error
 import System.HsOpenCL.Internal.C2HS
@@ -101,17 +102,6 @@ foreign import ccall "&" clReleaseProgram :: Releaser Program_
 newProgram :: Ptr () -> IO Program
 newProgram = newData Program clReleaseProgram
 
--- Note: cl_mem's aren't retained when they're set as kernel arguments.
--- Rather, they're only retained while the kernel is running, and released
--- once it's finished.
--- However, in OpenCL.Kernel the argument is set and run all within the same
--- call to withBufferPtr, so this should actually be OK.
-data Buffer_
-
--- | A region of memory on an OpenCL device.
-newtype Buffer a = Buffer (ForeignPtr Buffer_)
-withBuffer :: Buffer a -> (Ptr () -> IO b) -> IO b
-withBuffer (Buffer p) f = withForeignPtr p $ f . castPtr
 
 data Kernel_
 newtype Kernel = Kernel (ForeignPtr Kernel_)
@@ -128,8 +118,39 @@ withEvents [] g = g (0,nullPtr) -- required by OpenCL spec
 withEvents es g = withMany withEvent es $ \ps ->
                     withArrayLen ps $ \len p_ps -> g (toEnum len, p_ps)
 
+-----------------------------
+-- Memory
+-- 
+-- Note: cl_mem's aren't retained when they're set as kernel arguments.
+-- Rather, they're retained when the kernel starts running, and released
+-- once it's finished.
+-- Thus, in OpenCL.Kernel we set and launch the kernel all within the same call
+-- withBuffer, so it can never be freed accidentally.
+data Buffer_
 
----------
+-- | A region of memory on an OpenCL device.
+newtype Buffer a = Buffer (Ptr Buffer_)
+withBuffer :: Buffer a -> (Ptr () -> IO b) -> IO b
+withBuffer (Buffer p) = bracket_ (retainMemObject p) (releaseMemObject p)
+                            . ($ castPtr p)
+
+
+foreign import ccall "&" clRetainMemObject :: Releaser m
+
+{#fun clRetainMemObject as retainMemObject
+  { castPtr `Ptr m'
+  } -> `Int' checkSuccess*-
+#}
+
+foreign import ccall "&" clReleaseMemObject :: Releaser m
+
+{#fun clReleaseMemObject as releaseMemObject
+  { castPtr `Ptr m'
+  } -> `Int' checkSuccess*-
+#}
+
+
+--------------------
 -- Most of the types have a clGet*Info function following the same
 -- template;
 -- here's some boilerplace.

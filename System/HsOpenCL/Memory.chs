@@ -3,8 +3,8 @@ module System.HsOpenCL.Memory(
                 Buffer,
                 castBuffer,
                 bufferSize,
-                newBuffer,
-                touchBuffer,
+                mallocBuffer,
+                freeBuffer,
                 allocaBuffer,
                 -- * Reading, writing and copying
                 CopyTo(..),
@@ -77,24 +77,28 @@ data MemInitFlag a = NoHostPtr | UseHostPtr (Ptr a)
                         | CopyAllocHostPtr (Ptr a)
                     deriving (Show,Eq)
 
--- | Allocate memory on the device associated with this queue.  
--- The memory will be retained at least until the 'Buffer' goes out of scope and all
--- 'Command's using the 'Buffer' have completed.  
-newBuffer :: forall a m . (Storable a, MonadQueue m)
+-- | Allocate memory on the device associated with this queue.  The returned 'Buffer'
+-- must later be released with 'freeBuffer'.
+mallocBuffer :: forall a m . (Storable a, MonadQueue m)
         => MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
             -> m (Buffer a)
-newBuffer memAccess memInit size = do
+mallocBuffer memAccess memInit size = do
     cxt <- getContext
-    p <- liftIO $ newBuffer' cxt memAccess memInit size
-    liftIO $ Buffer <$> newForeignPtr clReleaseMemObject p
+    liftIO $ newBuffer' cxt memAccess memInit size
+
+-- | Release the memory associated with a 'Buffer'.
+-- The OpenCL runtime will delete the 'Buffer' once all 'Command's
+-- using the 'Buffer' have completed.
+freeBuffer :: MonadIO m => Buffer a -> m ()
+freeBuffer b = liftIO $ withBuffer b releaseMemObject
 
 newBuffer' :: forall a . (Storable a)
         => Context -> MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
-            -> IO (Ptr Buffer_)
+            -> IO (Buffer a)
 newBuffer' context memAccess hostPtr size
-    = clCreateBuffer context flags (size * eltSize) p'
+    = Buffer <$> clCreateBuffer context flags (size * eltSize) p'
   where
     flags = memFlag : hostPtrFlags
     eltSize = sizeOf (undefined :: a)
@@ -110,23 +114,20 @@ newBuffer' context memAccess hostPtr size
             MemWriteOnly -> CLMemWriteOnly_
             MemReadOnly -> CLMemReadOnly_
 
--- | Like 'touchForeignPtr', this ensures that a 'Buffer' allocatd by 'newBuffer' will be
--- in scope at the given place in the program.
-touchBuffer :: MonadIO m => Buffer a -> m ()
-touchBuffer (Buffer f) = liftIO $ touchForeignPtr f
-
 -- | Allocate memory on the device associated with this queue, and execute the given
--- action.  The 'Buffer' is released once the action has completed and all 'Command's
+-- action.  The 'Buffer' will be released once the action has completed and all 'Command's
 -- associated with it have finished.
+-- 
+-- Note that it is unsafe to use the 'Buffer' after this function has completed.
 allocaBuffer :: (Storable a, MonadQueue m) => MemAccessFlag -> MemInitFlag a
             -> Int -- ^ The number of elements in the buffer.
             -> (Buffer a -> m b) -> m b
 allocaBuffer memAccess hostPtr size f = do
     context <- getContext
     liftIOBracket (bracket
-        (newBuffer' context memAccess hostPtr size)
-        (releaseMemObject . castPtr))
-      $ \p -> liftIO (newForeignPtr_ p) >>= f . Buffer
+                        (newBuffer' context memAccess hostPtr size)
+                        freeBuffer)
+        f
 
 data IsBlocking = Blocking | NonBlocking
                     deriving (Show,Eq)
