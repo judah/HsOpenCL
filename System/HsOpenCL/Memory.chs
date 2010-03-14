@@ -88,9 +88,8 @@ mallocBuffer memAccess memInit size = do
     cxt <- getContext
     liftIO $ newBuffer' cxt memAccess memInit size
 
--- | Release the memory associated with a 'Buffer'.
--- The OpenCL runtime will delete the 'Buffer' once all 'Command's
--- using the 'Buffer' have completed.
+-- | Release the given 'Buffer'.  The OpenCL runtime will delete it
+-- once all 'Command's using the 'Buffer' have completed.
 freeBuffer :: MonadIO m => Buffer a -> m ()
 freeBuffer b = liftIO $ withBuffer b releaseMemObject
 
