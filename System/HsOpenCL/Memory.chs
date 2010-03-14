@@ -225,7 +225,6 @@ indices @[2..11]@ of @a@.
 All 'CopyTo' operations are unblocking.  As a result, when 'QueueOutOfOrderExecModeEnable'
 has been set, the runtime may copy data simultaneously or out of order from other
 'Command's.  
-order.  
 
 The module "System.HsOpenCL.Instances.CArray" exports instances for copying to and from
 'CArray's, which may be more convenient to use than pointers.
