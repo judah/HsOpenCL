@@ -2,8 +2,26 @@ cabal-version:       >= 1.6
 name:                HsOpenCL
 version:             0.0.1
 synopsis:            A binding to the OpenCL parallel computing framework.
-description:         <Project description>
-category:            
+description:         HsOpenCL is a \"middle-level\" API which improves type 
+                     safety, convenience and abstraction over the OpenCL C interface
+                     while providing essentially the same programming model.
+                     The library can be used to copy data to and from an OpenCL device;
+                     to load kernels written in
+                     OpenCL's C-like language; and to build and run those kernels.
+                     .
+                     The library currently supports a significant chunk of the OpenCL
+                     standard.  The major omissions are:
+                     .
+                       * Images
+                     .
+                       * Mapped buffers and images
+                     . 
+                       * Fine-tuned control of out-of-order queue execution
+                     .
+                     Additionally, the library has only been tested with Mac OS X Snow
+                     Leopard; patches are welcome to get it working on other
+                     platforms.
+category:            System
 license:             BSD3
 license-file:        LICENSE
 author:              Judah Jacobson
