@@ -66,6 +66,7 @@ foreign import ccall "&" clReleaseContext :: Releaser Context_
 retainedCLContext :: Ptr () -> IO Context
 retainedCLContext p = clRetainContext p >> newContext' p
 
+newContext' :: Ptr () -> IO Context
 newContext' = newData Context clReleaseContext
 
 -- Being careful of race conditions:

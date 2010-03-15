@@ -72,7 +72,6 @@ import Language.Haskell.TH.Quote
 import Control.Applicative ((<$>))
 import Control.Monad
 import qualified Data.ByteString.Char8 as B
-import System.IO.Unsafe
 
 import Data.Int
 import Data.Word
@@ -104,8 +103,6 @@ clProg = QuasiQuoter (\s -> appE (varE 'B.pack) (mkString s))
   where
     mkString s = do
         loc <- location
-        let file = loc_filename loc
-        let lineNum = fst $ loc_start loc
         litE $ stringL $ linePragma (fst (loc_start loc)) (loc_filename loc)
                             ++ s
 
@@ -150,6 +147,7 @@ declareBuildSig buildName progName = sigD buildName $ do
             [ConT ''String, VarT m `AppT` ConT progName]
 
 arrows :: [Type] -> Type
+arrows [] = error "arrows: empty list" -- To prevent warning
 arrows [t] = t
 arrows (t:ts) = AppT (AppT ArrowT t) $ arrows ts
 
@@ -273,13 +271,13 @@ kernelParam = globalParam <|> localParam <|> simpleParam
         AppT (ConT ''Local) <$> ptrParam
     simpleParam = do
         t <- typeIdent
-        var <- ident
+        ident
         return t
     ptrParam = do
         optional $ keyword "const"
         t <- typeIdent
         asterisk
-        v <- ident
+        ident
         return t
 
 tok :: Parser a -> Parser a
@@ -310,8 +308,10 @@ word = try . tok . string
 keyword :: String -> Parser ()
 keyword s = try $ tok $ string s >> notFollowedBy alphaNum
 
+asterisk :: Parser Char
 asterisk = tok (char '*')
 
+ident :: Parser String
 ident = tok $ liftM2 (:) identNonDigit (many identChar)
   where
     identNonDigit = letter <|> char '_'

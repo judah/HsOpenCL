@@ -10,17 +10,13 @@ module System.HsOpenCL.Instances.CArray(
 
 -- helper instances for using CArrays.
 
-import System.HsOpenCL.Kernel
 import System.HsOpenCL.Memory
 import System.HsOpenCL.CommandQueue
 
-import Control.Monad.Trans
 import Data.Array.CArray
 import Data.Array.IOCArray
 import Data.Array.CArray.Base
-import Foreign.ForeignPtr
 import Foreign.Storable
-import Control.Applicative
 
 -- Give the type-checker some hints, since functions like newArray
 -- are polymorphic.  This seems less messy than a bunch of ScopedTypeVariable
@@ -33,8 +29,6 @@ asCArray = id
 -- | Forces the type of an 'MArray' instance to be 'IOCArray'.
 asIOCArray :: m (IOCArray i a) -> m (IOCArray i a)
 asIOCArray = id
-
-iocarraySize (IOCArray _ _ n _) = n
 
 instance (BufferLike b, Ix i) => CopyTo (IOCArray i) b where
     IOCArray _ _ n fp =: b
@@ -50,7 +44,7 @@ instance (BufferLike b, Ix i) => CopyTo b (CArray i) where
 -- | Create a new (immutable) 'CArray' from the contents of a 'Buffer' or 'Slice'.
 copyToCArray :: (Ix i, Storable e, MonadQueue m, CopyTo (IOCArray i) b)
                     => (i,i) -> b e -> m (CArray i e)
-copyToCArray bounds b = do
-    a <- liftIO $ newArray_ bounds
+copyToCArray bs b = do
+    a <- liftIO $ newArray_ bs
     waitForCommands_ [ a =: b]
     liftIO $ unsafeFreezeIOCArray a

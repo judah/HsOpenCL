@@ -33,16 +33,10 @@ module System.HsOpenCL.Memory(
 #include <OpenCL/OpenCL.h>
 import System.HsOpenCL.Internal.Types
 import System.HsOpenCL.Internal.C2HS
-import System.HsOpenCL.CommandQueue(Command(..))
 import System.HsOpenCL.Error
 import System.HsOpenCL.CommandQueue
-import Data.Maybe
 import Control.Applicative
-import Control.Exception
--- TODO
--- Events/blocking
---
--- Images (restric types somehow...)
+import Control.Exception (bracket)
 
 castBuffer :: Buffer a -> Buffer b
 castBuffer (Buffer a) = Buffer a
@@ -336,21 +330,20 @@ enum CLMemInfo {
 
 
 memFlags :: MemObject m => m -> (MemAccessFlag, MemInitFlag a)
-memFlags m = (accessFlag exists, memInit)
+memFlags m = (accessFlag, memInit)
   where
-    exists = getPureProp (getMemInfo m CLMemFlags)
-    memInit = getMemInitFlags exists
-    accessFlag exists
-        | exists CLMemReadOnly_ = MemReadOnly
-        | exists CLMemWriteOnly_ = MemWriteOnly
+    flagExists = getPureProp (getMemInfo m CLMemFlags)
+    accessFlag
+        | flagExists CLMemReadOnly_ = MemReadOnly
+        | flagExists CLMemWriteOnly_ = MemWriteOnly
         | otherwise = MemReadWrite
     getPtrProp constr = constr $ getPureProp (getMemInfo m CLMemHostPtr)
-    getMemInitFlags exists
-        | exists CLMemUseHostPtr_   = getPtrProp UseHostPtr
-        | exists CLMemCopyHostPtr_
-            = if exists CLMemAllocHostPtr_ then getPtrProp CopyAllocHostPtr
+    memInit
+        | flagExists CLMemUseHostPtr_   = getPtrProp UseHostPtr
+        | flagExists CLMemCopyHostPtr_
+            = if flagExists CLMemAllocHostPtr_ then getPtrProp CopyAllocHostPtr
                     else getPtrProp CopyHostPtr
-        | exists CLMemAllocHostPtr_ = AllocHostPtr
+        | flagExists CLMemAllocHostPtr_ = AllocHostPtr
         | otherwise = NoHostPtr
 
 -- | Size of the data store, in bytes.
@@ -370,10 +363,6 @@ bufferSize b = memSize b `div` sizeOf (undefined :: e)
 memContext :: MemObject m => m -> Context
 memContext m = unsafePerformIO $
                     getProp (getMemInfo m CLMemContext) >>= newContext
-
-getMemReferenceCount :: MemObject m => m -> IO Int
-getMemReferenceCount m
-    = getProp (getMemInfo m CLMemReferenceCount)
 
 --------
 --  Opaque class for cl_mem

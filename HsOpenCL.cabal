@@ -68,4 +68,8 @@ Library
                 Rank2Types, TemplateHaskell
     frameworks: OpenCL
     -- Note: -fvia-C prevents a segfault (ghc trac #3789)
-    ghc-options: -fvia-C
+    if impl(ghc>=6.11) {
+        ghc-options: -fvia-C -Wall -fno-warn-orphans -fno-warn-unused-do-bind
+    } else {
+        ghc-options: -fvia-C -Wall -fno-warn-orphans
+    }

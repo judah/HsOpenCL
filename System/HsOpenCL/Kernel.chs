@@ -28,7 +28,6 @@ import System.HsOpenCL.Internal.C2HS
 import System.HsOpenCL.Error
 import System.HsOpenCL.Platform(Size,ULong)
 import System.HsOpenCL.CommandQueue
-import Control.Monad
 
 {#fun clCreateKernel
   { withProgram* `Program'
@@ -40,6 +39,7 @@ import Control.Monad
 createKernel :: MonadIO m => Program -> String -> m Kernel
 createKernel p name = liftIO $ clCreateKernel p name
 
+newKernel :: Ptr () -> IO Kernel
 newKernel = newData Kernel clReleaseKernel
 foreign import ccall "&" clReleaseKernel :: Releaser Kernel_
 
@@ -119,19 +119,7 @@ newtype Local a = Local Int
 instance Storable a => KernelArg (Local a) where
     withKernelArg (Local n) f = f (sizeOf (undefined :: a)*n) nullPtr
 
-setKernelArg :: KernelArg a => Kernel -> Int -> a -> IO ()
-setKernelArg kernel n x = withKernelArg x $ clSetKernelArg kernel n
-
 data SomeArg = forall a . KernelArg a => SomeArg a
-
-setKernelArgs :: Kernel -> [SomeArg]-> IO ()
-setKernelArgs k = zipWithM_ setter [0..]
-  where
-    setter n (SomeArg x) = setKernelArg k n x
-
-infixr 6 &:
-(&:) :: KernelArg a => a -> [SomeArg] -> [SomeArg]
-x &: xs = SomeArg x : xs
 
 
 {#fun clEnqueueNDRangeKernel
@@ -145,10 +133,6 @@ x &: xs = SomeArg x : xs
   , eventPtr `EventPtr'
   } -> `Int' checkSuccess*-
 #}
-
-ndRangeKernel :: NDRange d => Kernel -> d -> Maybe d -> Command
-ndRangeKernel kernel global local
-    = mkCommand $ runKernel' kernel global local
 
 -- TODO: check # of args with getinfo
 runKernelWithArgs :: NDRange d => Kernel -> d -> Maybe d
@@ -164,12 +148,12 @@ runKernel' :: NDRange d => Kernel -> d -> Maybe d
             -> CommandQueue -> [Event] -> EventPtr -> IO ()
 runKernel' kernel globalWorkSize localWorkSize queue es ep
        = withArrayLen gsizes $ \dim globalSizes ->
-          withLocalSizeArray dim $ \localSizes ->
+          withLocalSizeArray $ \localSizes ->
             clEnqueueNDRangeKernel queue kernel dim nullPtr
                     globalSizes localSizes es ep
   where
     gsizes = rangeDims globalWorkSize
-    withLocalSizeArray dim = case localWorkSize of
+    withLocalSizeArray = case localWorkSize of
         Nothing -> ($ nullPtr)
         Just sizesD -> let lsizes = rangeDims sizesD
                        in if length lsizes /= length gsizes
@@ -201,17 +185,6 @@ instance Integral a => NDRange (a,a,a) where
 
 
 
-{#fun clEnqueueTask
- { withCommandQueue* `CommandQueue'
- , withKernel* `Kernel'
-  , withEvents* `[Event]'&
-  , eventPtr `EventPtr'
- } -> `Int' checkSuccess*-
-#}
-
-
-task :: Kernel -> Command
-task kernel = mkCommand $ \queue -> clEnqueueTask queue kernel
 ---------
 -- Queries
 

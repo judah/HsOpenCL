@@ -118,9 +118,9 @@ printBuildErrors prog = handle printErr
         forM_ (programDevices prog) $ \dev -> do
             stat <- getBuildStatus prog dev
             when (stat == BuildError) $ do
-                log <- getBuildLog prog dev
+                theLog <- getBuildLog prog dev
                 putStrLn (show dev ++ ":")
-                B.putStrLn log
+                B.putStrLn theLog
         throw e
 
 {#fun clUnloadCompiler as unloadCompiler

@@ -7,8 +7,6 @@ import System.HsOpenCL.Internal.C2HS
 import System.HsOpenCL.Error
 import System.HsOpenCL.Internal.Types
 
-import Control.Applicative
-
 {#fun clGetPlatformIDs
   { `Int'
   , castPtr `Ptr ()'

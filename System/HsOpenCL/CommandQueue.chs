@@ -61,7 +61,6 @@ import System.HsOpenCL.Platform.Foreign(CommandQueueProperty(..))
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
-import Data.Ix
 import Data.Array.Base as Array
 
 
@@ -88,7 +87,7 @@ instance MonadIO m => MonadIO (QueueT m) where
 
 class MonadIO m => MonadBracket m where
     liftIOBracket :: (forall b . (a -> IO b) -> IO b)
-                            -> (a -> m b) -> m b
+                            -> (a -> m c) -> m c
 
 instance MonadBracket IO where
     liftIOBracket = id
@@ -107,7 +106,7 @@ instance MonadBracket m => MonadQueue (QueueT m) where
 instance MArray a e m => MArray a e (QueueT m) where
     getBounds = lift . getBounds
     getNumElements = lift . getNumElements
-    newArray bounds e = lift $ Array.newArray bounds e
+    newArray bs e = lift $ Array.newArray bs e
     newArray_ = lift . newArray_
     unsafeNewArray_ = lift . unsafeNewArray_
     unsafeRead a i = lift $ unsafeRead a i
@@ -189,6 +188,7 @@ setQueueProperties queue props bool
 ------------------
 -- Events
 
+{- Unused
 {#fun clWaitForEvents
   { withEvents* `[Event]'&
   } -> `CLInt' checkSuccess*-
@@ -199,6 +199,11 @@ waitForEvents = liftIO . clWaitForEvents
 
 waitForEvent :: MonadIO m => Event -> m ()
 waitForEvent e = waitForEvents [e]
+
+-- TODO: not useful yet...
+waitingFor :: [Event] -> Command -> Command
+waitingFor es (Command f) = Command $ \q es' e -> f q (es++es') e
+-}
 
 {#fun clGetEventInfo as getEventInfo
   { withEvent* `Event'
@@ -275,12 +280,6 @@ getEventCommandExecutionStatus e = toEnum <$>
 
 
 -------
--- TODO: just Command {finalize :: IO, runCommand :: ...->IO Event}???
-
-
--- TODO: not useful yet...
-waitingFor :: [Event] -> Command -> Command
-waitingFor es (Command f) = Command $ \q es' e -> f q (es++es') e
 
 -- TODO: What happens if we use waitForEvents instead of finish?
 
@@ -305,14 +304,6 @@ waitForCommands cs = do
     finish
     liftIO $ sequence_ fs
     return $ reverse es
-  where
-    loop q es [] = return es
-    loop q es (c:cs) = do
-        ef <- alloca $ \p -> do
-                f <- runCommand c q [] (EventPtr p)
-                e <- peek p >>= newEvent
-                return (e,f)
-        loop q (ef:es) cs
 
 newEvent :: Ptr () -> IO Event
 newEvent = newData Event clReleaseEvent
@@ -328,9 +319,9 @@ waitForCommands_ cs = do
     finish
     liftIO fs
   where
-    loop q fs [] = return fs
+    loop _ fs [] = return fs
     -- TODO: time with both f>>fs and f:fs, and see which is fastest.
-    loop q fs (c:cs) = runCommand c q [] (EventPtr nullPtr) >>= \f -> loop q (f>>fs) cs
+    loop q fs (d:ds) = runCommand d q [] (EventPtr nullPtr) >>= \f -> loop q (f>>fs) ds
 
 -- | Enqueue and run one 'Command'.  Once that 'Command' has completed, returns
 -- an 'Event' describing the input 'Command'.
@@ -423,6 +414,8 @@ runQueueForContext dev cxt f = do
     queue <- liftIO $ createCommandQueue cxt dev []
     runQueueT f queue
 
+{- UNUSED
+
 {#fun clFlush
   { withCommandQueue* `CommandQueue'
   } -> `Int' checkSuccess*-
@@ -430,6 +423,7 @@ runQueueForContext dev cxt f = do
 
 flush :: MonadQueue m => m ()
 flush = getQueue >>= liftIO . clFlush
+-}
 
 {#fun clFinish
   { withCommandQueue* `CommandQueue'
