@@ -118,6 +118,20 @@ withEvents [] g = g (0,nullPtr) -- required by OpenCL spec
 withEvents es g = withMany withEvent es $ \ps ->
                     withArrayLen ps $ \len p_ps -> g (toEnum len, p_ps)
 
+----------------
+-- Commands
+
+-- | An action which can be enqueued and run on an OpenCL device;
+-- for example, reading/writing host memory or running a program kernel.
+newtype Command = Command {runCommand :: CommandQueue ->
+                            [Event] -> EventPtr -> IO (IO ())}
+
+-- | Low-level function to help create 'Command's.
+mkCommand :: (CommandQueue -> [Event] -> EventPtr -> IO ())
+                    -> Command
+mkCommand f = Command $ \q es e -> f q es e >> return (return ())
+
+
 -----------------------------
 -- Memory
 -- 

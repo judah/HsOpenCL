@@ -15,14 +15,11 @@ module System.HsOpenCL.CommandQueue(
                 getDevice,
                 setProperties,
                 -- * Commands
-                Command(..),
+                Command(),
                 -- waitingFor,
                 waitForCommand,
                 waitForCommands,
                 waitForCommands_,
-                mkCommand,
-                -- flush,
-                -- finish,
                 -- * Command queues
                 CommandQueue,
                 CommandQueueProperty(..),
@@ -280,17 +277,6 @@ getEventCommandExecutionStatus e = toEnum <$>
 -------
 -- TODO: just Command {finalize :: IO, runCommand :: ...->IO Event}???
 
--- | An action which can be enqueued and run on an OpenCL device;
--- for example, reading/writing host memory or running a program kernel.
-newtype Command = Command {runCommand :: CommandQueue ->
-                            [Event] -> EventPtr -> IO (IO ())}
-
--- TODO: data EventPtr to wrap the Ptr (Ptr ())?
-
--- | Low-level function to help create 'Command's.
-mkCommand :: (CommandQueue -> [Event] -> EventPtr -> IO ())
-                    -> Command
-mkCommand f = Command $ \q es e -> f q es e >> return (return ())
 
 -- TODO: not useful yet...
 waitingFor :: [Event] -> Command -> Command
