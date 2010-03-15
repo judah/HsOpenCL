@@ -326,7 +326,13 @@ typeIdent = do
         "unsigned" -> do {i <- ident; lookupType ('u':i)}
         _ -> lookupType n
   where
-    lookupType n = case lookup n scalarTypes of
+    -- Remove a trailing vector #, e.g. float8 -> float
+    stripVecNum "" = ""
+    stripVecNum xs
+        | xs `elem` ["2","4","8","16"] = ""
+    stripVecNum (x:xs) = x : stripVecNum xs
+
+    lookupType n = case lookup (stripVecNum n) scalarTypes of
         Nothing -> fail $ "bad type: " ++ show n
         Just t -> return t
     
