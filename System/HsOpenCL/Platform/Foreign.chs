@@ -109,11 +109,11 @@ enum CLDeviceGlobalMemCacheType {
 #endc
 {#enum CLDeviceGlobalMemCacheType {} deriving (Eq)#}
 
-
+type CNotifier = Ptr CChar -> Ptr () -> CULong -> Ptr () -> IO ()
 {#fun clCreateContext as clCreateContext
   { id `Ptr CLong'
   , withDeviceIDs* `[DeviceID]'&
-  , castFunPtr `FunPtr ()'
+  , id `FunPtr CNotifier'
   , id `Ptr ()'
   , alloca- `CInt' checkSuccessPtr*-
   } -> `Context' newContext*
@@ -122,7 +122,7 @@ enum CLDeviceGlobalMemCacheType {
 {#fun clCreateContextFromType as clCreateContextFromType
   { id `Ptr CLong'
   , combineBitMasks `[DeviceType]'
-  , castFunPtr `FunPtr ()'
+  , id `FunPtr CNotifier'
   , id `Ptr ()'
   , alloca- `CInt' checkSuccessPtr*-
   } -> `Context' newContext*

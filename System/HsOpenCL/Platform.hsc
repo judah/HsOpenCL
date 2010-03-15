@@ -18,6 +18,8 @@ module System.HsOpenCL.Platform(
             createContext,
             createContextFromType,
             contextDevices,
+            setNotifier,
+            Notifier,
             -- * Device properties
             Size,
             ULong, 
@@ -81,6 +83,9 @@ module System.HsOpenCL.Platform(
 
 import Control.Applicative
 import Control.Exception
+import Control.Concurrent.MVar
+import Control.Monad.Trans
+import Data.ByteString (ByteString, packCStringLen)
 
 import System.HsOpenCL.Internal.C2HS
 import System.HsOpenCL.Error
@@ -316,13 +321,41 @@ devicePlatform = PlatformID . castPtr . deviceInfo (#const CL_DEVICE_PLATFORM)
 -- Contexts
 
 createContext :: [DeviceID] -> IO Context
-createContext devices = clCreateContext nullPtr devices nullFunPtr nullPtr
+createContext devices = withNotifier $ clCreateContext nullPtr devices
+
+foreign import ccall "wrapper" mkNotifier :: CNotifier -> IO (FunPtr CNotifier)
 
 createContextFromType :: [DeviceType] -> IO Context
-createContextFromType dtype = clCreateContextFromType nullPtr
-                                dtype nullFunPtr nullPtr
+createContextFromType dtype = withNotifier $ clCreateContextFromType nullPtr dtype
+
+withNotifier :: (FunPtr CNotifier -> Ptr () -> IO a) -> IO a
+withNotifier f = do
+    c_notify <- mkNotifier notify
+    f c_notify nullPtr
+  where
+    notify c_errinfo c_private_info size _ = do
+        errinfo <- peekCString c_errinfo
+        privateInfo <- packCStringLen (castPtr c_private_info :: Ptr CChar,
+                                        fromEnum size)
+        notifierFunc <- readMVar notifyMVar
+        notifierFunc errinfo privateInfo
 
 contextDevices :: Context -> [DeviceID]
 contextDevices context = map DeviceID
         $ getPureProp (clGetContextInfo context CLContextDevices)
 
+type Notifier = String -- ^ An error string.
+                -> ByteString -- ^ Binary data which can be used to log
+                                -- additional information (implementation-dependent).
+                -> IO ()
+
+-- I apologize for this hack.
+{-# NOINLINE notifyMVar #-}
+notifyMVar :: MVar Notifier
+notifyMVar = unsafePerformIO $ newMVar $ \_ _ -> return ()
+
+-- | Set an action to be run when an error occurs in a context.
+-- 
+-- The default is for no action to be run.
+setNotifier :: MonadIO m => Notifier -> m ()
+setNotifier nf = liftIO $ swapMVar notifyMVar nf >> return ()
