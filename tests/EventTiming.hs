@@ -14,7 +14,7 @@ import Data.Word
 import Data.List
 import Text.Printf
 
-myprog = [$clProg|
+myprog = [clProg|
             __kernel void add(__global float *a, __global float *b,
                                 float c, __global float *answer)
             {

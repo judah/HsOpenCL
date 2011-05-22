@@ -15,8 +15,8 @@ main = do
     allocaArray n $ \(temp::Ptr Float) -> do
     runQueueForType DeviceTypeGPU $ do
     p <- buildProgramFromSource "" [file]
-    c <- newBuffer MemReadWrite NoHostPtr n
-    d <- newBuffer MemReadWrite NoHostPtr n
+    allocaBuffer MemReadWrite NoHostPtr n $ \c -> do
+    allocaBuffer MemReadWrite NoHostPtr n $ \d -> do
     let printAll = do
         liftIO $ putStrLn "-----------"
         liftIO $ putStr "a: " >> peekArray n a >>= print

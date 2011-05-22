@@ -22,7 +22,7 @@ import Data.List
 import Text.Printf
 import Control.Exception
 
-declareKernels "MatrixMult" [$clProg|
+declareKernels "MatrixMult" [clProg|
     __kernel void multNaive(__global float* a, __global float* b,
                         __global float* c,
                         int N) {
