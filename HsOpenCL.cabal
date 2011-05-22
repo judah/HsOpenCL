@@ -28,10 +28,6 @@ author:              Judah Jacobson
 maintainer:          judah.jacobson@gmail.com
 build-type:          Simple
 
-flag vector-instances
-    Description: include instances for copying to/from Vectors.
-    Default: True
-
 Library
     build-tools: c2hs
     build-depends:   base>=4.3 && < 5, bytestring==0.9.*, array>=0.2 && < 0.4,
@@ -39,7 +35,7 @@ Library
                      -- For OpenCL.TH:
                      template-haskell>=2.5 && < 2.6, parsec==3.*,
                      -- For OpenCL.Instances:
-                     carray==0.1.*
+                     carray==0.1.*, vector==0.7.*
     exposed-modules:
         System.HsOpenCL.Error
         System.HsOpenCL.Platform
@@ -49,13 +45,9 @@ Library
         System.HsOpenCL.Memory
         System.HsOpenCL
         System.HsOpenCL.Instances.CArray
+        System.HsOpenCL.Instances.Vector
         System.HsOpenCL.TH
 
-    -- vector-0.5.1 is not released on Hackage yet, so wrap this in a flag.
-    if flag(vector-instances) {
-        build-depends: vector>=0.5.1 && <0.6
-        exposed-modules: System.HsOpenCL.Instances.Vector
-}
 
     other-modules:
         System.HsOpenCL.Internal.C2HS

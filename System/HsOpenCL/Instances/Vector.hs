@@ -11,7 +11,6 @@ import System.HsOpenCL.CommandQueue
 
 import Data.Vector.Storable as V
 import Data.Vector.Storable.Mutable as MV
-import Data.Vector.Generic (unsafeFreeze)
 
 instance BufferLike b => CopyTo IOVector b where
     v =: b = sp =: asSlice b
@@ -37,4 +36,4 @@ copyToVector m = do
     let b = asSlice m
     mv <- liftIO $ new (sizeS b)
     waitForCommands [mv =: b]
-    liftIO $ unsafeFreeze mv
+    liftIO $ V.unsafeFreeze mv
