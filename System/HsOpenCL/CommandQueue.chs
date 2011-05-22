@@ -90,7 +90,7 @@ class MonadIO m => MonadBracket m where
                             -> (a -> m c) -> m c
 
 instance MonadBracket IO where
-    liftIOBracket = id
+    liftIOBracket f = f
 
 instance MonadBracket m => MonadBracket (QueueT m) where
     liftIOBracket wrap f = QueueT $ \queue ->

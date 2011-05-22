@@ -34,10 +34,10 @@ flag vector-instances
 
 Library
     build-tools: c2hs
-    build-depends:   base>=4 && < 5, bytestring==0.9.*, array>=0.2 && < 0.4,
+    build-depends:   base>=4.3 && < 5, bytestring==0.9.*, array>=0.2 && < 0.4,
                      mtl==1.1.*,
                      -- For OpenCL.TH:
-                     template-haskell>=2.3 && < 2.5, parsec==3.*,
+                     template-haskell>=2.5 && < 2.6, parsec==3.*,
                      -- For OpenCL.Instances:
                      carray==0.1.*
     exposed-modules:
@@ -67,9 +67,4 @@ Library
                 OverlappingInstances
                 Rank2Types, TemplateHaskell
     frameworks: OpenCL
-    -- Note: -fvia-C prevents a segfault (ghc trac #3789)
-    if impl(ghc>=6.11) {
-        ghc-options: -fvia-C -Wall -fno-warn-orphans -fno-warn-unused-do-bind
-    } else {
-        ghc-options: -fvia-C -Wall -fno-warn-orphans
-    }
+    ghc-options: -Wall -fno-warn-orphans -fno-warn-unused-do-bind

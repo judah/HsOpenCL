@@ -98,8 +98,12 @@ declareKernels progStr contents = do
         progStr contents
 
 clProg :: QuasiQuoter
-clProg = QuasiQuoter (\s -> appE (varE 'B.pack) (mkString s))
-            (litP . stringL)
+clProg = QuasiQuoter {
+                quoteExp = \s -> appE (varE 'B.pack) (mkString s),
+                quotePat = litP . stringL,
+                quoteType = const $ fail "clProg: can't quote into a type",
+                quoteDec = const $ fail "clProg: can't quote into a declaration"
+        }
   where
     mkString s = do
         loc <- location
@@ -152,11 +156,7 @@ arrows [t] = t
 arrows (t:ts) = AppT (AppT ArrowT t) $ arrows ts
 
 cxtd :: Name -> Name -> Type -> Type
-#if __GLASGOW_HASKELL__ >= 611
 cxtd cls v t = ForallT [PlainTV v] [ClassP cls [VarT v]] t
-#else
-cxtd cls v t = ForallT [v] [AppT (ConT cls) (VarT v)] t
-#endif
 
 -- OK, now the build def:
 -- buildProg options = do
