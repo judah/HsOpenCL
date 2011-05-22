@@ -51,7 +51,7 @@ main = runQueueForType DeviceTypeGPU $ do
         putStrLn "First 10 results are:"
         mapM (readArray results) [0..9] >>= print
         let ave = foldl1' (+) (map cvtTime times) / toEnum numTests
-        printf "Average kernel run time: %.5f seconds" ave
+        printf "Average kernel run time: %.5f seconds\n" ave
 
 cvtTime :: Word64 -> Double
 cvtTime w = fromIntegral w / 10^9
