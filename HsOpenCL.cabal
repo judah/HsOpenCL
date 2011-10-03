@@ -35,7 +35,7 @@ Library
                      -- For OpenCL.TH:
                      template-haskell>=2.5 && < 2.7, parsec==3.*,
                      -- For OpenCL.Instances:
-                     carray==0.1.*, vector==0.7.*
+                     vector==0.9.*
     exposed-modules:
         System.HsOpenCL.Error
         System.HsOpenCL.Platform
@@ -44,8 +44,6 @@ Library
         System.HsOpenCL.Kernel
         System.HsOpenCL.Memory
         System.HsOpenCL
-        System.HsOpenCL.Instances.CArray
-        System.HsOpenCL.Instances.Vector
         System.HsOpenCL.TH
 
 

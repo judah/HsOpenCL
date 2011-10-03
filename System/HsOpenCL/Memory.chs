@@ -13,6 +13,7 @@ module System.HsOpenCL.Memory(
                 slice,
                 sizeS,
                 SlicedPtr(..),
+                copyToVector,
                 -- ** Buffer operations
                 -- | This section provides an API for buffer operations which is closer
                 -- to the actual OpenCL API.
@@ -37,6 +38,10 @@ import System.HsOpenCL.Error
 import System.HsOpenCL.CommandQueue
 import Control.Applicative
 import Control.Exception (bracket)
+
+import qualified Data.Vector.Storable as V
+import qualified Data.Vector.Storable.Mutable as MV
+
 
 castBuffer :: Buffer a -> Buffer b
 castBuffer (Buffer a) = Buffer a
@@ -376,3 +381,32 @@ class MemObject m where
 
 instance MemObject (Buffer a) where
     withMemObject = withBuffer
+
+
+--------------------
+-- Instances for Vector:
+instance BufferLike b => CopyTo MV.IOVector b where
+    v =: b = sp =: asSlice b
+      where
+        (fp,offset,len) = MV.unsafeToForeignPtr v
+        sp = SlicedPtr {ptrFPtr=fp, ptrOffset=offset, ptrLength=len}
+
+instance BufferLike b => CopyTo b MV.IOVector where
+    b =: v = asSlice b =: sp
+      where
+        (fp,offset,len) = MV.unsafeToForeignPtr v
+        sp = SlicedPtr {ptrFPtr=fp, ptrOffset=offset, ptrLength=len}
+
+instance BufferLike b => CopyTo b V.Vector where
+    b =: v = asSlice b =: sp
+      where
+        (fp,offset,len) = V.unsafeToForeignPtr v
+        sp = SlicedPtr {ptrFPtr=fp, ptrOffset=offset, ptrLength=len}
+
+copyToVector :: (Storable e, MonadQueue m, BufferLike b)
+                    => b e -> m (V.Vector e)
+copyToVector m = do
+    let b = asSlice m
+    mv <- liftIO $ MV.new (sizeS b)
+    waitForCommands [mv =: b]
+    liftIO $ V.unsafeFreeze mv
