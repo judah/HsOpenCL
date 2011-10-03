@@ -33,7 +33,7 @@ main = do
     testBinaryBuild [test1]
 
 testBuild bs = do
-    cxt <- createContextFromType DeviceTypeAll
+    cxt <- createContextFromType deviceTypeAll
     prog <- createProgramWithSource cxt bs
     handle (handler prog) $ do
         buildProgram prog "-D foo"
@@ -46,7 +46,7 @@ testBuild bs = do
         print e
 
 testBinaryBuild bs = do
-    cxt <- createContextFromType DeviceTypeGPU
+    cxt <- createContextFromType [DeviceTypeGPU]
     let devs = contextDevices cxt
     prog <- createProgramWithSource cxt bs
     buildProgram prog ""
