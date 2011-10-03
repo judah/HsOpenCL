@@ -22,7 +22,7 @@ module System.HsOpenCL.Platform(
             Notifier,
             -- * Device properties
             Size,
-            ULong, 
+            ClULong, 
             deviceType,
             deviceVendorId,
             deviceMaxComputeUnits,
@@ -139,7 +139,8 @@ deviceInfo :: Property a => Int -> DeviceID -> a
 deviceInfo prop dev = getPureProp (clGetDeviceInfo dev prop)
 
 type Size = #type size_t
-type ULong = #type cl_ulong
+type ClUInt = #type cl_uint
+type ClULong = #type cl_ulong
 
 -- Don't worrry about overflow; the spec says that CL_DEVICE_TYPE_ALL
 -- won't be returned.
@@ -149,13 +150,13 @@ deviceType d = getPureFlags (clGetDeviceInfo d (#const CL_DEVICE_TYPE))
                         , DeviceTypeAccelerator, DeviceTypeDefault
                         ]
 
-deviceVendorId :: DeviceID -> Int
+deviceVendorId :: DeviceID -> ClUInt
 deviceVendorId = deviceInfo (#const CL_DEVICE_VENDOR_ID)
 
-deviceMaxComputeUnits :: DeviceID -> Int
+deviceMaxComputeUnits :: DeviceID -> ClUInt
 deviceMaxComputeUnits = deviceInfo (#const CL_DEVICE_MAX_COMPUTE_UNITS)
 
-deviceMaxWorkItemDimensions :: DeviceID -> Int
+deviceMaxWorkItemDimensions :: DeviceID -> CUInt
 deviceMaxWorkItemDimensions = deviceInfo (#const CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS)
 
 deviceMaxWorkGroupSize :: DeviceID -> Size
@@ -164,37 +165,37 @@ deviceMaxWorkGroupSize = deviceInfo (#const CL_DEVICE_MAX_WORK_GROUP_SIZE)
 deviceMaxWorkItemSizes :: DeviceID -> [Size]
 deviceMaxWorkItemSizes = deviceInfo (#const CL_DEVICE_MAX_WORK_ITEM_SIZES)
 
-devicePreferredVectorWidthChar :: DeviceID -> Int
+devicePreferredVectorWidthChar :: DeviceID -> ClUInt
 devicePreferredVectorWidthChar = deviceInfo (#const CL_DEVICE_PREFERRED_VECTOR_WIDTH_CHAR)
 
-devicePreferredVectorWidthShort :: DeviceID -> Int
+devicePreferredVectorWidthShort :: DeviceID -> ClUInt
 devicePreferredVectorWidthShort = deviceInfo (#const CL_DEVICE_PREFERRED_VECTOR_WIDTH_SHORT)
 
-devicePreferredVectorWidthInt :: DeviceID -> Int
+devicePreferredVectorWidthInt :: DeviceID -> ClUInt
 devicePreferredVectorWidthInt = deviceInfo (#const CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT)
 
-devicePreferredVectorWidthLong :: DeviceID -> Int
+devicePreferredVectorWidthLong :: DeviceID -> ClUInt
 devicePreferredVectorWidthLong = deviceInfo (#const CL_DEVICE_PREFERRED_VECTOR_WIDTH_LONG)
 
-devicePreferredVectorWidthFloat :: DeviceID -> Int
+devicePreferredVectorWidthFloat :: DeviceID -> ClUInt
 devicePreferredVectorWidthFloat = deviceInfo (#const CL_DEVICE_PREFERRED_VECTOR_WIDTH_FLOAT)
 
-devicePreferredVectorWidthDouble :: DeviceID -> Int
+devicePreferredVectorWidthDouble :: DeviceID -> ClUInt
 devicePreferredVectorWidthDouble = deviceInfo (#const CL_DEVICE_PREFERRED_VECTOR_WIDTH_DOUBLE)
 
-deviceMaxClockFrequency :: DeviceID -> Int
+deviceMaxClockFrequency :: DeviceID -> ClUInt
 deviceMaxClockFrequency = deviceInfo (#const CL_DEVICE_MAX_CLOCK_FREQUENCY)
 
-deviceAddressBits :: DeviceID -> Int
+deviceAddressBits :: DeviceID -> ClUInt
 deviceAddressBits = deviceInfo (#const CL_DEVICE_ADDRESS_BITS)
 
-deviceMaxReadImageArgs :: DeviceID -> Int
+deviceMaxReadImageArgs :: DeviceID -> ClUInt
 deviceMaxReadImageArgs = deviceInfo (#const CL_DEVICE_MAX_READ_IMAGE_ARGS)
 
-deviceMaxWriteImageArgs :: DeviceID -> Int
+deviceMaxWriteImageArgs :: DeviceID -> ClUInt
 deviceMaxWriteImageArgs = deviceInfo (#const CL_DEVICE_MAX_WRITE_IMAGE_ARGS)
 
-deviceMaxMemAllocSize :: DeviceID -> ULong
+deviceMaxMemAllocSize :: DeviceID -> CULLong
 deviceMaxMemAllocSize = deviceInfo (#const CL_DEVICE_MAX_MEM_ALLOC_SIZE)
 
 deviceImage2dMaxWidth :: DeviceID -> Size
@@ -218,31 +219,31 @@ deviceImageSupport = deviceInfo (#const CL_DEVICE_IMAGE_SUPPORT)
 deviceMaxParameterSize :: DeviceID -> Size
 deviceMaxParameterSize = deviceInfo (#const CL_DEVICE_MAX_PARAMETER_SIZE)
 
-deviceMaxSamplers :: DeviceID -> Int
+deviceMaxSamplers :: DeviceID -> CUInt
 deviceMaxSamplers = deviceInfo (#const CL_DEVICE_MAX_SAMPLERS)
 
-deviceMemBaseAddrAlign :: DeviceID -> Int
+deviceMemBaseAddrAlign :: DeviceID -> ClUInt
 deviceMemBaseAddrAlign = deviceInfo (#const CL_DEVICE_MEM_BASE_ADDR_ALIGN)
 
-deviceMinDataTypeAlignSize :: DeviceID -> Int
+deviceMinDataTypeAlignSize :: DeviceID -> ClUInt
 deviceMinDataTypeAlignSize = deviceInfo (#const CL_DEVICE_MIN_DATA_TYPE_ALIGN_SIZE)
 
-deviceGlobalMemCachelineSize :: DeviceID -> Int
+deviceGlobalMemCachelineSize :: DeviceID -> CInt
 deviceGlobalMemCachelineSize = deviceInfo (#const CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE)
 
-deviceGlobalMemCacheSize :: DeviceID -> ULong
+deviceGlobalMemCacheSize :: DeviceID -> ClULong
 deviceGlobalMemCacheSize = deviceInfo (#const CL_DEVICE_GLOBAL_MEM_CACHE_SIZE)
 
-deviceGlobalMemSize :: DeviceID -> ULong
+deviceGlobalMemSize :: DeviceID -> ClULong
 deviceGlobalMemSize = deviceInfo (#const CL_DEVICE_GLOBAL_MEM_SIZE)
 
-deviceMaxConstantBufferSize :: DeviceID -> ULong
+deviceMaxConstantBufferSize :: DeviceID -> ClULong
 deviceMaxConstantBufferSize = deviceInfo (#const CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE)
 
-deviceMaxConstantArgs :: DeviceID -> Int
+deviceMaxConstantArgs :: DeviceID -> CUInt
 deviceMaxConstantArgs = deviceInfo (#const CL_DEVICE_MAX_CONSTANT_ARGS)
 
-deviceLocalMemSize :: DeviceID -> ULong
+deviceLocalMemSize :: DeviceID -> ClULong
 deviceLocalMemSize = deviceInfo (#const CL_DEVICE_LOCAL_MEM_SIZE)
 
 deviceErrorCorrectionSupport :: DeviceID -> Bool
@@ -302,14 +303,16 @@ deviceExecutionCapabilities dev = getPureFlags
                 [ExecKernel, ExecNativeKernel]
 
 deviceLocalMemType :: DeviceID -> DeviceLocalMemType
-deviceLocalMemType = toEnum . deviceInfo (#const CL_DEVICE_LOCAL_MEM_TYPE)
+deviceLocalMemType = (cEnum :: (#type cl_device_local_mem_type) -> DeviceLocalMemType)
+                        . deviceInfo (#const CL_DEVICE_LOCAL_MEM_TYPE)
 
 data DeviceGlobalMemCacheType = ReadOnlyCache | ReadWriteCache
                                     deriving (Show,Eq)
 
 deviceGlobalMemCacheType :: DeviceID -> Maybe DeviceGlobalMemCacheType
 deviceGlobalMemCacheType d
-    = case toEnum $ deviceInfo (#const CL_DEVICE_GLOBAL_MEM_CACHE_TYPE) d of
+    = case cEnum (deviceInfo (#const CL_DEVICE_GLOBAL_MEM_CACHE_TYPE) d
+                    :: (#type cl_device_mem_cache_type)) of
         CLNone -> Nothing
         CLReadOnlyCache -> Just ReadOnlyCache
         CLReadWriteCache -> Just ReadWriteCache

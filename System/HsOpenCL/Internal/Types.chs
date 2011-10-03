@@ -24,6 +24,9 @@ type Releaser a_ = FunPtr (Ptr a_ -> IO ())
 cEnum :: (Enum a, Enum b) => a -> b
 cEnum = toEnum . fromEnum
 
+cuintToInt :: CUInt -> Int
+cuintToInt = cEnum
+
 newData :: (ForeignPtr a_ -> a) -> Releaser a_
                     -> (Ptr () -> IO a)
 newData construct release p = construct <$> newForeignPtr release (castPtr p)
@@ -194,11 +197,21 @@ class Property a where
 getPureProp :: Property a => GetInfoFunc -> a
 getPureProp = unsafePerformIO . getProp
 
-instance Property Int where
-    getProp getInfo = fromEnum <$> (storableInfo getInfo :: IO CInt)
+instance Property CUInt where
+    getProp = storableInfo
 
+instance Property CULLong where
+    getProp = storableInfo
+
+instance Property CInt where
+    getProp = storableInfo
+
+instance Property CSize where
+    getProp = storableInfo
+
+-- TODO: This is probably wrong.
 instance Property Bool where
-    getProp getInfo = (/=0) <$> (storableInfo getInfo :: IO CInt)
+    getProp getInfo = (/=0) <$> (storableInfo getInfo :: IO {#type cl_bool #})
 
 instance Property (Ptr a) where
     getProp = storableInfo

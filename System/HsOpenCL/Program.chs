@@ -156,7 +156,7 @@ programContext p@(Program fp)
 
 programDevices :: Program -> [DeviceID]
 programDevices p = map DeviceID $ unsafePerformIO
-        $ getArrayN (getPureProp (getInfo p CLProgramNumDevices))
+        $ getArrayN (fromEnum (getPureProp (getInfo p CLProgramNumDevices) :: CUInt))
                 (getInfo p CLProgramDevices)
 
 -- Note the spec ensures that the returned char[] is null-terminated,
@@ -167,8 +167,10 @@ programSource p = getPureProp $ getInfo p CLProgramSource
 -- NB: one for each device associated with the program.
 getProgramBinaries :: Program -> IO [ByteString]
 getProgramBinaries prog = do
-    numDevs <- getProp (getInfo prog CLProgramNumDevices)
-    sizes :: [CSize] <- getArrayN numDevs (getInfo prog CLProgramBinarySizes)
+    numDevs <- fmap cEnum (getProp (getInfo prog CLProgramNumDevices)
+                            :: IO CUInt)
+    sizes :: [CSize] <- getArrayN numDevs
+                            (getInfo prog CLProgramBinarySizes)
     createN (map fromEnum sizes) $ \cstrs -> do
         let infoSize = sizeOf (undefined :: CString) * numDevs
         r <- getInfo prog CLProgramBinaries infoSize (castPtr cstrs)
@@ -206,8 +208,8 @@ enum BuildStatus {
 #}
 
 getBuildStatus :: Program -> DeviceID -> IO BuildStatus
-getBuildStatus prog device = toEnum <$> (getProp $
-        getBuildInfo prog device CLProgramBuildStatus)
+getBuildStatus prog device = cEnum <$> (getProp $
+        getBuildInfo prog device CLProgramBuildStatus :: IO CInt)
 
 getBuildOptions :: Program -> DeviceID -> IO String
 getBuildOptions prog device = getProp $

@@ -245,7 +245,9 @@ enum CommandType {
 {#enum CommandType {} deriving (Show,Eq)#}
 
 eventCommandType :: Event -> CommandType
-eventCommandType e = toEnum $ getPureProp (getEventInfo e CLEventCommandType)
+eventCommandType e = cEnum 
+    (getPureProp (getEventInfo e CLEventCommandType)
+        :: CInt)
 
 #c
 enum ExecutionStatus {
@@ -258,8 +260,9 @@ enum ExecutionStatus {
 {#enum ExecutionStatus {} deriving (Show,Eq)#}
 
 getEventCommandExecutionStatus :: Event -> IO ExecutionStatus
-getEventCommandExecutionStatus e = toEnum <$>
-    getProp (getEventInfo e CLEventCommandExecutionStatus)
+getEventCommandExecutionStatus e = cEnum <$>
+    (getProp (getEventInfo e CLEventCommandExecutionStatus)
+        :: IO CInt)
 
 
 

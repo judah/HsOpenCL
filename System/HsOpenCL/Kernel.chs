@@ -26,7 +26,7 @@ module System.HsOpenCL.Kernel(
 import System.HsOpenCL.Internal.Types
 import System.HsOpenCL.Internal.C2HS
 import System.HsOpenCL.Error
-import System.HsOpenCL.Platform(Size,ULong)
+import System.HsOpenCL.Platform(Size,ClULong)
 import System.HsOpenCL.CommandQueue
 
 {#fun clCreateKernel
@@ -232,7 +232,7 @@ kernelFunctionName :: Kernel -> String
 kernelFunctionName k = getPureProp (getInfo k CLKernelFunctionName)
 
 kernelNumArgs :: Kernel -> Int
-kernelNumArgs k = getPureProp (getInfo k CLKernelNumArgs)
+kernelNumArgs k = fromEnum (getPureProp (getInfo k CLKernelNumArgs) :: CUInt)
 
 kernelContext :: Kernel -> Context
 kernelContext k@(Kernel fp)
@@ -254,7 +254,7 @@ kernelCompileWorkGroupSize k d = unsafePerformIO $ do
     [x,y,z] <- getArrayN 3 (getWorkGroupInfo k d CLKernelWorkGroupSize)
     return (x,y,z)
 
-getKernelLocalMemSize :: Kernel -> DeviceID -> IO ULong
+getKernelLocalMemSize :: Kernel -> DeviceID -> IO ClULong
 getKernelLocalMemSize k d = getProp $ getWorkGroupInfo k d CLKernelLocalMemSize
 
 ----------------------

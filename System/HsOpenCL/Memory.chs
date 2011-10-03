@@ -353,7 +353,7 @@ memFlags m = (accessFlag, memInit)
 
 -- | Size of the data store, in bytes.
 memSize :: MemObject m => m -> Int
-memSize m = getPureProp (getMemInfo m CLMemSize)
+memSize m = fromEnum (getPureProp (getMemInfo m CLMemSize) :: CSize)
 
 -- | Number of elements in the buffer.
 bufferSize :: forall e . Storable e => Buffer e -> Int
