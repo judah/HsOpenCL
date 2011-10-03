@@ -6,7 +6,7 @@ import System.HsOpenCL
 import Language.Haskell.TH
 
 
-main = getDeviceIDs DeviceTypeAll Nothing >>= mapM_ printAttrs
+main = getDeviceIDs deviceTypeAll Nothing >>= mapM_ printAttrs
   where
     printAttr d (n,f) = putStrLn $ n ++ ": " ++ f d
     printAttrs d = do
