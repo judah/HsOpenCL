@@ -6,7 +6,7 @@ import System.HsOpenCL
 import Control.Exception
 
 main = do
-    cxt <- createContextFromType DeviceTypeAll
+    cxt <- createContextFromType deviceTypeAll
     let devs = contextDevices cxt
     print devs
     print (map deviceType devs)
@@ -19,16 +19,11 @@ testQueueInfos q = do
     print (queueDevice q)
     print (contextDevices (queueContext q))
     getQueueProperties q >>= print
-    handle (\(e::SomeException) -> putStrLn $ "Got exception: " ++ show e)
-        $ setQueueProperties q [QueueOutOfOrderExecModeEnable] False
-    getQueueProperties q >>= print
-    setQueueProperties q [QueueProfilingEnable] False
-    getQueueProperties q >>= print
 
 testBufferInfos = do
     p :: Ptr Float <- liftIO $ newArray [1..10]
-    buf :: Buffer Float <- newBuffer MemReadOnly (CopyAllocHostPtr p) 5
-    buf2 :: Buffer Float <- newBuffer MemReadWrite (UseHostPtr p) 5
+    allocaBuffer MemReadOnly (CopyAllocHostPtr p) 5 $ \buf -> do
+    allocaBuffer MemReadOnly (UseHostPtr p) 5 $ \buf2 -> do
     liftIO $ do
     putStrLn "--- Buffer ---"
     print p

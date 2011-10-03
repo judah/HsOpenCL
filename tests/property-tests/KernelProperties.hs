@@ -21,7 +21,7 @@ myprog = [$clProg|
 |]
 
 main = do
-    dev <- getDeviceID DeviceTypeGPU
+    dev <- getDeviceID [DeviceTypeGPU]
     context <- createContext [dev]
     prog <- createProgramWithSource context [myprog]
     buildProgram prog ""
