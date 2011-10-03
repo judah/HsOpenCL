@@ -60,3 +60,4 @@ Library
                 Rank2Types, TemplateHaskell
     frameworks: OpenCL
     ghc-options: -Wall -fno-warn-orphans -fno-warn-unused-do-bind
+    cc-options: -U__BLOCKS__
