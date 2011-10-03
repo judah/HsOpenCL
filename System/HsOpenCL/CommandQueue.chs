@@ -13,7 +13,6 @@ module System.HsOpenCL.CommandQueue(
                 -- ** Basic queue operations
                 getContext,
                 getDevice,
-                setProperties,
                 -- * Commands
                 Command(),
                 -- waitingFor,
@@ -28,7 +27,6 @@ module System.HsOpenCL.CommandQueue(
                 queueDevice,
                 queueContext,
                 getQueueProperties,
-                setQueueProperties,
                 -- * Events
                 Event,
                 -- waitForEvents,
@@ -170,20 +168,6 @@ getQueueProperties queue = getFlags (getInfo queue CLQueueProperties)
                             [ QueueOutOfOrderExecModeEnable
                             , QueueProfilingEnable
                             ]
-
-{#fun clSetCommandQueueProperty as clSetCommandQueueProperty
-  { withCommandQueue* `CommandQueue'
-  , combineBitMasks `[CommandQueueProperty]'
-  , `Bool'
-  , castPtr `Ptr ()' -- Ignoring the return value of old properties,
-                -- since it can be extracted by clGetCommandQueueInfo.
-  } -> `CLInt' checkSuccess*-
-#}
-
-setQueueProperties :: CommandQueue -> [CommandQueueProperty]
-                                -> Bool -> IO ()
-setQueueProperties queue props bool
-    = clSetCommandQueueProperty queue props bool nullPtr
 
 ------------------
 -- Events
@@ -393,11 +377,6 @@ getContext = liftM queueContext getQueue
 
 getDevice :: MonadQueue m => m DeviceID
 getDevice = liftM queueDevice getQueue
-
-setProperties :: MonadQueue m => [CommandQueueProperty] -> Bool -> m ()
-setProperties props bool = do
-    queue <- getQueue
-    liftIO $ setQueueProperties queue props bool
 
 runQueueForDevice  :: MonadIO m => DeviceID -> QueueT m a -> m a
 runQueueForDevice dev f = do
